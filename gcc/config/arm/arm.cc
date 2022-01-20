@@ -921,6 +921,11 @@ int arm_arch8_3 = 0;
 
 /* Nonzero if this chip supports the ARM Architecture 8.4 extensions.  */
 int arm_arch8_4 = 0;
+
+/* Nonzero if this chip supports the ARM Architecture 8-M Mainline
+   extensions.  */
+int arm_arch8m_main = 0;
+
 /* Nonzero if this chip supports the ARM Architecture 8.1-M Mainline
    extensions.  */
 int arm_arch8_1m_main = 0;
@@ -3198,6 +3203,9 @@ arm_option_override_internal (struct gcc_options *opts,
       arm_stack_protector_guard_offset = offs;
     }
 
+  if (arm_current_function_pac_enabled_p () && !arm_arch8m_main)
+    error ("This architecture does not support branch protection instructions");
+
 #ifdef SUBTARGET_OVERRIDE_INTERNAL_OPTIONS
   SUBTARGET_OVERRIDE_INTERNAL_OPTIONS;
 #endif
@@ -3833,6 +3841,7 @@ arm_option_reconfigure_globals (void)
   arm_arch_arm_hwdiv = bitmap_bit_p (arm_active_target.isa, isa_bit_adiv);
   arm_arch_crc = bitmap_bit_p (arm_active_target.isa, isa_bit_crc32);
   arm_arch_cmse = bitmap_bit_p (arm_active_target.isa, isa_bit_cmse);
+  arm_arch8m_main = arm_arch7 && arm_arch_cmse;
   arm_arch_lpae = bitmap_bit_p (arm_active_target.isa, isa_bit_lpae);
   arm_arch_i8mm = bitmap_bit_p (arm_active_target.isa, isa_bit_i8mm);
   arm_arch_bf16 = bitmap_bit_p (arm_active_target.isa, isa_bit_bf16);
@@ -21198,6 +21207,9 @@ arm_compute_save_core_reg_mask (void)
 
   save_reg_mask |= arm_compute_save_reg0_reg12_mask ();
 
+  if (arm_current_function_pac_enabled_p ())
+    save_reg_mask |= 1 << IP_REGNUM;
+
   /* Decide if we need to save the link register.
      Interrupt routines have their own banked link register,
      so they never need to save it.
@@ -23411,6 +23423,12 @@ output_probe_stack_range (rtx reg1, rtx reg2)
   return "";
 }
 
+static bool
+aarch_bti_enabled ()
+{
+  return false;
+}
+
 /* Generate the prologue instructions for entry into an ARM or Thumb-2
    function.  */
 void
@@ -23489,12 +23507,13 @@ arm_expand_prologue (void)
 
   /* The static chain register is the same as the IP register.  If it is
      clobbered when creating the frame, we need to save and restore it.  */
-  clobber_ip = IS_NESTED (func_type)
-	       && ((TARGET_APCS_FRAME && frame_pointer_needed && TARGET_ARM)
-		   || ((flag_stack_check == STATIC_BUILTIN_STACK_CHECK
-			|| flag_stack_clash_protection)
-		       && !df_regs_ever_live_p (LR_REGNUM)
-		       && arm_r3_live_at_start_p ()));
+  clobber_ip = (IS_NESTED (func_type)
+                && (((TARGET_APCS_FRAME && frame_pointer_needed && TARGET_ARM)
+                     || ((flag_stack_check == STATIC_BUILTIN_STACK_CHECK
+                          || flag_stack_clash_protection)
+                         && !df_regs_ever_live_p (LR_REGNUM)
+                         && arm_r3_live_at_start_p ()))
+                    || (arm_current_function_pac_enabled_p ())));
 
   /* Find somewhere to store IP whilst the frame is being created.
      We try the following places in order:
@@ -23519,7 +23538,8 @@ arm_expand_prologue (void)
 	{
 	  rtx addr, dwarf;
 
-	  gcc_assert(arm_compute_static_chain_stack_bytes() == 4);
+	  gcc_assert(arm_compute_static_chain_stack_bytes() == 4
+                     || arm_current_function_pac_enabled_p ());
 	  saved_regs += 4;
 
 	  addr = gen_rtx_PRE_DEC (Pmode, stack_pointer_rtx);
@@ -23568,6 +23588,14 @@ arm_expand_prologue (void)
 	  fp_offset = args_to_push;
 	  args_to_push = 0;
 	}
+    }
+
+  if (arm_current_function_pac_enabled_p ())
+    {
+      if (aarch_bti_enabled ())
+	emit_insn (gen_pacbti_nop ());
+      else
+	emit_insn (gen_pac_nop ());
     }
 
   if (TARGET_APCS_FRAME && frame_pointer_needed && TARGET_ARM)
@@ -27381,7 +27409,7 @@ thumb2_expand_return (bool simple_return)
 	 to assert it for now to ensure that future code changes do not silently
 	 change this behavior.  */
       gcc_assert (!IS_CMSE_ENTRY (arm_current_func_type ()));
-      if (num_regs == 1)
+      if (num_regs == 1 && !arm_current_function_pac_enabled_p ())
         {
           rtx par = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (2));
           rtx reg = gen_rtx_REG (SImode, PC_REGNUM);
@@ -27396,10 +27424,20 @@ thumb2_expand_return (bool simple_return)
         }
       else
         {
-          saved_regs_mask &= ~ (1 << LR_REGNUM);
-          saved_regs_mask |=   (1 << PC_REGNUM);
-          arm_emit_multi_reg_pop (saved_regs_mask);
-        }
+	  if (arm_current_function_pac_enabled_p ())
+	    {
+	      gcc_assert (!(saved_regs_mask & (1 << PC_REGNUM)));
+	      arm_emit_multi_reg_pop (saved_regs_mask);
+	      emit_insn (gen_aut_nop ());
+	      emit_jump_insn (simple_return_rtx);
+	    }
+	  else
+	    {
+	      saved_regs_mask &= ~ (1 << LR_REGNUM);
+	      saved_regs_mask |=   (1 << PC_REGNUM);
+	      arm_emit_multi_reg_pop (saved_regs_mask);
+	    }
+	}
     }
   else
     {
@@ -27805,7 +27843,8 @@ arm_expand_epilogue (bool really_return)
           && really_return
           && crtl->args.pretend_args_size == 0
           && saved_regs_mask & (1 << LR_REGNUM)
-          && !crtl->calls_eh_return)
+          && !crtl->calls_eh_return
+	  && !arm_current_function_pac_enabled_p ())
         {
           saved_regs_mask &= ~(1 << LR_REGNUM);
           saved_regs_mask |= (1 << PC_REGNUM);
@@ -27918,6 +27957,9 @@ arm_expand_epilogue (bool really_return)
 	  RTX_FRAME_RELATED_P (insn) = 1;
 	}
     }
+
+  if (arm_current_function_pac_enabled_p ())
+    emit_insn (gen_aut_nop ());
 
   if (!really_return)
     return;
@@ -33000,6 +33042,15 @@ bool
 arm_fusion_enabled_p (tune_params::fuse_ops op)
 {
   return current_tune->fusible_ops & op;
+}
+
+/* Return TRUE if return address signing mechanism is enabled.  */
+bool
+arm_current_function_pac_enabled_p (void)
+{
+  return (aarch_ra_sign_scope == AARCH_FUNCTION_ALL
+          || (aarch_ra_sign_scope == AARCH_FUNCTION_NON_LEAF
+              && !crtl->is_leaf));
 }
 
 /* Implement TARGET_SCHED_CAN_SPECULATE_INSN.  Return true if INSN can be
