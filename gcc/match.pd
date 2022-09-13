@@ -988,7 +988,8 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (simplify
     (op (lshift:s @0 @1) (lshift:s @2 @1))
     (if (INTEGRAL_TYPE_P (type)
-	 && TYPE_OVERFLOW_WRAPS (type)
+	 && !TYPE_OVERFLOW_SANITIZED (type)
+	 && !TYPE_OVERFLOW_TRAPS (type)
 	 && !TYPE_SATURATING (type))
       (lshift (op @0 @2) @1))))
 
