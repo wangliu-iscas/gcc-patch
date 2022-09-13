@@ -5278,6 +5278,11 @@ configured with --enable-newlib-nano-formatted-io.])
       [-march=rv32i_zifencei2p0],,,
       [AC_DEFINE(HAVE_AS_MARCH_ZIFENCEI, 1,
 		 [Define if the assembler understands -march=rv*_zifencei.])])
+    gcc_GAS_CHECK_FEATURE([-mcsr-check],
+      gcc_cv_as_riscv_csr_check,
+      [-mcsr-check],,,
+      [AC_DEFINE(HAVE_AS_MCSR_CHECK, 1,
+		 [Define if the assembler understands -mcsr-check.])])
     ;;
     loongarch*-*-*)
     gcc_GAS_CHECK_FEATURE([.dtprelword support],

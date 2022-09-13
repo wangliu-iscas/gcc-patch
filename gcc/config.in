@@ -616,6 +616,12 @@
 #endif
 
 
+/* Define if your assembler supports -mcsr-check. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_AS_MCSR_CHECK
+#endif
+
+
 /* Define if your Mac OS X assembler supports -mllvm -x86-pad-for-align=false.
    */
 #ifndef USED_FOR_TARGET
