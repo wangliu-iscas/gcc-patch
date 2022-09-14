@@ -56,11 +56,12 @@ along with GCC; see the file COPYING3.  If not see
 #define GNU_USER_TARGET_LINK_SPEC "\
   %{G*} %{EB} %{EL} %{mips*} %{shared} \
   %{!shared: \
-    %{!static: \
+    %{!static:%{!static-pie: \
       %{rdynamic:-export-dynamic} \
       %{mabi=n32: -dynamic-linker " GNU_USER_DYNAMIC_LINKERN32 "} \
       %{mabi=64: -dynamic-linker " GNU_USER_DYNAMIC_LINKER64 "} \
-      %{mabi=32: -dynamic-linker " GNU_USER_DYNAMIC_LINKER32 "}} \
+      %{mabi=32: -dynamic-linker " GNU_USER_DYNAMIC_LINKER32 "}}} \
+    %{static-pie:-Bstatic -pie --no-dynamic-linker -z text} \
     %{static}} \
   %{mabi=n32:-m" GNU_USER_LINK_EMULATIONN32 "} \
   %{mabi=64:-m" GNU_USER_LINK_EMULATION64 "} \
