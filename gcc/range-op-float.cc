@@ -218,7 +218,11 @@ frange_add_zeros (frange &r, tree type)
 
   if (HONOR_SIGNED_ZEROS (type)
       && (real_iszero (&r.lower_bound ()) || real_iszero (&r.upper_bound ())))
-    r.set_signbit (fp_prop::VARYING);
+    {
+      frange zero;
+      zero.set_zero (type);
+      r.union_ (zero);
+    }
 }
 
 // Build a range that is <= VAL and store it in R.
