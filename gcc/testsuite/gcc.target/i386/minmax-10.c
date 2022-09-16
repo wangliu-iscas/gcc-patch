@@ -34,5 +34,5 @@ unsigned int umin1(unsigned int x)
   return min(x,1);
 }
 
-/* { dg-final { scan-assembler-times "test" 6 } } */
-/* { dg-final { scan-assembler-not "cmp" } } */
+/* { dg-final { scan-assembler-times "test" 6 { target { ! ia32 } } } } */
+/* { dg-final { scan-assembler-not {(?n)cmp.*1} } } */

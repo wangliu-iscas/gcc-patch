@@ -22,4 +22,4 @@ int bar ()
 }
 
 /* We should not optimize away either comparison.  */
-/* { dg-final { scan-assembler-times "cmp" 2 } } */
+/* { dg-final { scan-assembler-times "(?:cmp|test)" 3 } } */
