@@ -6521,10 +6521,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 			  && !dsym->attr.allocatable
 			  && !dsym->attr.pointer
 			  && e->expr_type == EXPR_VARIABLE
-			  && e->ref == NULL
-			  && e->symtree
-			  && e->symtree->n.sym
-			  && !e->symtree->n.sym->attr.dimension
+			  && e->rank == 0
 			  && e->ts.type != BT_CHARACTER
 			  && e->ts.type != BT_DERIVED
 			  && e->ts.type != BT_CLASS
