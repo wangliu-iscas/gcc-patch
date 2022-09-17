@@ -1,4 +1,5 @@
-/* { dg-do run } */
+/* { dg-do compile } */
+/* { dg-do run { target { vma_equals_lma } } } */
 /* { dg-require-effective-target persistent } */
 /* { dg-skip-if "data LMA != VMA" { msp430-*-* } { "-mlarge" } } */
 /* { dg-options "-save-temps" } */
