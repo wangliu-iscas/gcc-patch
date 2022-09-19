@@ -3409,7 +3409,7 @@
       if (op0_regno == op1_regno)
 	return ASM_COMMENT_START " vec_extract to same register";
 
-      else if (INT_REGNO_P (op0_regno) && TARGET_DIRECT_MOVE
+      else if (INT_REGNO_P (op0_regno) && TARGET_POWER8
 	       && TARGET_POWERPC64)
 	return "mfvsrd %0,%x1";
 
@@ -6206,7 +6206,7 @@
    (set (match_operand:SF SFBOOL_MTVSR_D "vsx_register_operand")
 	(unspec:SF [(match_dup SFBOOL_SHL_D)] UNSPEC_P8V_MTVSRD))]
 
-  "TARGET_POWERPC64 && TARGET_DIRECT_MOVE
+  "TARGET_POWERPC64 && TARGET_POWER8
    /* The REG_P (xxx) tests prevents SUBREG's, which allows us to use REGNO
       to compare registers, when the mode is different.  */
    && REG_P (operands[SFBOOL_MFVSR_D]) && REG_P (operands[SFBOOL_BOOL_D])

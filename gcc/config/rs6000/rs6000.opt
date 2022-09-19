@@ -492,6 +492,11 @@ Use ISA 2.07 Category:Vector.AES and Category:Vector.SHA2 instructions.
 
 mdirect-move
 Target Undocumented Mask(DIRECT_MOVE) Var(rs6000_isa_flags) WarnRemoved
+Enable direct move (ISA 2.07).
+
+mpower8
+Target Mask(POWER8) Var(rs6000_isa_flags)
+Use instructions added in ISA 2.07 (power8).
 
 mhtm
 Target Mask(HTM) Var(rs6000_isa_flags)

@@ -441,7 +441,9 @@ rs6000_target_modify_macros (bool define_p, HOST_WIDE_INT flags)
 	disabled and OPTION_MASK_DIRECT_MOVE was not explicitly
 	enabled.
      2. TARGET_VSX is off.  */
-  if ((flags & OPTION_MASK_DIRECT_MOVE) != 0)
+  if ((OPTION_MASK_DIRECT_MOVE) != 0)
+    rs6000_define_or_undefine_macro (define_p, "__DIRECT_MOVE__");
+  if ((flags & OPTION_MASK_POWER8) != 0)
     rs6000_define_or_undefine_macro (define_p, "_ARCH_PWR8");
   if ((flags & OPTION_MASK_MODULO) != 0)
     rs6000_define_or_undefine_macro (define_p, "_ARCH_PWR9");
