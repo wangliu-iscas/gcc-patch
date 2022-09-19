@@ -458,7 +458,6 @@ extern int rs6000_vector_align[];
 			 || TARGET_CMPB		/* ISA 2.05 */		\
 			 || TARGET_POPCNTD)	/* ISA 2.06 */
 
-#define TARGET_FCTIDZ	TARGET_FCFID
 #define TARGET_STFIWX	TARGET_PPC_GFXOPT
 #define TARGET_LFIWAX	TARGET_CMPB
 #define TARGET_LFIWZX	TARGET_POPCNTD
@@ -466,8 +465,6 @@ extern int rs6000_vector_align[];
 #define TARGET_FCFIDU	TARGET_POPCNTD
 #define TARGET_FCFIDUS	TARGET_POPCNTD
 #define TARGET_FCTIDUZ	TARGET_POPCNTD
-#define TARGET_FCTIWUZ	TARGET_POPCNTD
-#define TARGET_CTZ	TARGET_MODULO
 #define TARGET_EXTSWSLI	(TARGET_MODULO && TARGET_POWERPC64)
 #define TARGET_MADDLD	TARGET_MODULO
 
@@ -1753,7 +1750,7 @@ typedef struct rs6000_args
    zero.  The hardware instructions added in Power9 and the sequences using
    popcount return 32 or 64.  */
 #define CTZ_DEFINED_VALUE_AT_ZERO(MODE, VALUE)				\
-  (TARGET_CTZ || TARGET_POPCNTD						\
+  (TARGET_MODULO || TARGET_POPCNTD						\
    ? ((VALUE) = GET_MODE_BITSIZE (MODE), 2)				\
    : ((VALUE) = -1, 2))
 

@@ -22035,7 +22035,7 @@ rs6000_rtx_costs (rtx x, machine_mode mode, int outer_code,
       return false;
 
     case CTZ:
-      *total = COSTS_N_INSNS (TARGET_CTZ ? 1 : 4);
+      *total = COSTS_N_INSNS (TARGET_MODULO ? 1 : 4);
       return false;
 
     case FFS:
