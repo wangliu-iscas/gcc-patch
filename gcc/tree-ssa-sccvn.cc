@@ -73,6 +73,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "fold-const-call.h"
 #include "ipa-modref-tree.h"
 #include "ipa-modref.h"
+#include "gimple-range.h"
 #include "tree-ssa-sccvn.h"
 
 /* This algorithm is based on the SCC algorithm presented by Keith
@@ -360,10 +361,11 @@ static vn_ssa_aux_t last_pushed_avail;
    correct.  */
 static vn_tables_t valid_info;
 
+tree (*vn_valueize) (tree);
 
 /* Valueization hook for simplify_replace_tree.  Valueize NAME if it is
    an SSA name, otherwise just return it.  */
-tree (*vn_valueize) (tree);
+
 static tree
 vn_valueize_for_srt (tree t, void* context ATTRIBUTE_UNUSED)
 {
@@ -378,6 +380,36 @@ vn_valueize_for_srt (tree t, void* context ATTRIBUTE_UNUSED)
   tree res = vn_valueize (t);
   vn_context_bb = saved_vn_context_bb;
   return res;
+}
+
+class vn_fur : public fur_depend
+{
+public:
+  vn_fur (gimple *s, gori_compute *g, range_query *q)
+    : fur_depend (s, g, q) {}
+  virtual bool get_operand (vrange &, tree);
+  virtual bool get_phi_operand (vrange &, tree, edge);
+};
+
+bool
+vn_fur::get_operand (vrange &r, tree op)
+{
+  return fur_depend::get_operand (r, vn_valueize (op));
+}
+
+bool
+vn_fur::get_phi_operand (vrange &r, tree op, edge e)
+{
+  // ???  Check region boundary, avoid walking ourside of the region
+  // somehow?  Possibly when initializing the ranger object?
+  // or can/should we simply return 'false' when we arrive with
+  // e being the entry edge?  What about for non-PHIs?  Can we
+  // somehow force to only use the global range and stop caching
+  // after that?
+  if (e->flags & EDGE_EXECUTABLE)
+    return fur_depend::get_phi_operand (r, vn_valueize (op), e);
+  r.set_undefined ();
+  return true;
 }
 
 
@@ -7292,12 +7324,12 @@ eliminate_with_rpo_vn (bitmap inserted_exprs)
 
 static unsigned
 do_rpo_vn_1 (function *fn, edge entry, bitmap exit_bbs,
-	     bool iterate, bool eliminate, vn_lookup_kind kind);
+	     bool iterate, bool eliminate, vn_lookup_kind kind, gimple_ranger *);
 
 void
 run_rpo_vn (vn_lookup_kind kind)
 {
-  do_rpo_vn_1 (cfun, NULL, NULL, true, false, kind);
+  do_rpo_vn_1 (cfun, NULL, NULL, true, false, kind, NULL);
 
   /* ???  Prune requirement of these.  */
   constant_to_value_id = new hash_table<vn_constant_hasher> (23);
@@ -7580,7 +7612,8 @@ insert_related_predicates_on_edge (enum tree_code code, tree *ops, edge pred_e)
 static unsigned
 process_bb (rpo_elim &avail, basic_block bb,
 	    bool bb_visited, bool iterate_phis, bool iterate, bool eliminate,
-	    bool do_region, bitmap exit_bbs, bool skip_phis)
+	    bool do_region, bitmap exit_bbs, bool skip_phis,
+	    gimple_ranger *ranger)
 {
   unsigned todo = 0;
   edge_iterator ei;
@@ -7765,6 +7798,20 @@ process_bb (rpo_elim &avail, basic_block bb,
 			print_gimple_stmt (dump_file, last, TDF_SLIM);
 		      }
 		  }
+	      }
+	    if (!val && ranger)
+	      {
+		int_range_max r;
+		fold_using_range f;
+		// ???  We get here with not valueized operands but
+		// the fur_source only is involved for operands of
+		// this very stmt, not when ranger prefills its cache
+		// walking use->def edges.
+		vn_fur src (last, &ranger->gori (), ranger);
+		tree tem;
+		if (f.fold_stmt (r, last, src)
+		    && r.singleton_p (&tem))
+		  val = tem;
 	      }
 	    if (val)
 	      e = find_taken_edge (bb, val);
@@ -7997,7 +8044,8 @@ do_unwind (unwind_state *to, rpo_elim &avail)
 
 static unsigned
 do_rpo_vn_1 (function *fn, edge entry, bitmap exit_bbs,
-	     bool iterate, bool eliminate, vn_lookup_kind kind)
+	     bool iterate, bool eliminate, vn_lookup_kind kind,
+	     gimple_ranger *ranger)
 {
   unsigned todo = 0;
   default_vn_walk_kind = kind;
@@ -8213,7 +8261,8 @@ do_rpo_vn_1 (function *fn, edge entry, bitmap exit_bbs,
 	todo |= process_bb (avail, bb,
 			    rpo_state[idx].visited != 0,
 			    rpo_state[idx].iterate,
-			    iterate, eliminate, do_region, exit_bbs, false);
+			    iterate, eliminate, do_region, exit_bbs, false,
+			    ranger);
 	rpo_state[idx].visited++;
 
 	/* Verify if changed values flow over executable outgoing backedges
@@ -8326,7 +8375,8 @@ do_rpo_vn_1 (function *fn, edge entry, bitmap exit_bbs,
 	  nblk++;
 	  todo |= process_bb (avail, bb, false, false, false, eliminate,
 			      do_region, exit_bbs,
-			      skip_entry_phis && bb == entry->dest);
+			      skip_entry_phis && bb == entry->dest,
+			      ranger);
 	  rpo_state[idx].visited++;
 
 	  FOR_EACH_EDGE (e, ei, bb->succs)
@@ -8419,14 +8469,17 @@ do_rpo_vn_1 (function *fn, edge entry, bitmap exit_bbs,
    If ITERATE is true then treat backedges optimistically as not
    executed and iterate.  If ELIMINATE is true then perform
    elimination, otherwise leave that to the caller.
-   KIND specifies the amount of work done for handling memory operations.  */
+   KIND specifies the amount of work done for handling memory operations.
+   When RANGER is specified use that to simplify conditionals.  */
 
 unsigned
 do_rpo_vn (function *fn, edge entry, bitmap exit_bbs,
-	   bool iterate, bool eliminate, vn_lookup_kind kind)
+	   bool iterate, bool eliminate, vn_lookup_kind kind,
+	   gimple_ranger *ranger)
 {
   auto_timevar tv (TV_TREE_RPO_VN);
-  unsigned todo = do_rpo_vn_1 (fn, entry, exit_bbs, iterate, eliminate, kind);
+  unsigned todo = do_rpo_vn_1 (fn, entry, exit_bbs, iterate, eliminate, kind,
+			       ranger);
   free_rpo_vn ();
   return todo;
 }
@@ -8482,7 +8535,9 @@ pass_fre::execute (function *fun)
   if (iterate_p)
     loop_optimizer_init (AVOID_CFG_MODIFICATIONS);
 
-  todo = do_rpo_vn_1 (fun, NULL, NULL, iterate_p, true, VN_WALKREWRITE);
+  gimple_ranger ranger;
+  todo = do_rpo_vn_1 (fun, NULL, NULL, iterate_p, true, VN_WALKREWRITE,
+		      &ranger); //!iterate_p ? &ranger : NULL);
   free_rpo_vn ();
 
   if (iterate_p)

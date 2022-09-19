@@ -298,7 +298,8 @@ tree vn_nary_simplify (vn_nary_op_t);
 unsigned do_rpo_vn (function *, edge, bitmap,
 		    /* iterate */ bool = false,
 		    /* eliminate */ bool = true,
-		    vn_lookup_kind = VN_WALKREWRITE);
+		    vn_lookup_kind = VN_WALKREWRITE,
+		    class gimple_ranger * = NULL);
 
 /* Private interface for PRE.  */
 void run_rpo_vn (vn_lookup_kind);
