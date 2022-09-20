@@ -10872,8 +10872,10 @@ check_return_expr (tree retval, bool *no_warning)
 	 the conditions for the named return value optimization.  */
       bool converted = false;
       tree moved;
-      /* This is only interesting for class type.  */
-      if (CLASS_TYPE_P (functype)
+      /* Until C++23, this was only interesting for class type, but
+	 (FIXME) in C++23, we should do the below for any type.  */
+      if ((CLASS_TYPE_P (functype)
+	   || (cxx_dialect >= cxx23 && TYPE_REF_P (functype)))
 	  && (moved = treat_lvalue_as_rvalue_p (retval, /*return*/true)))
 	{
 	  if (cxx_dialect < cxx20)

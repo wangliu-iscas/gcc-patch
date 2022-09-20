@@ -1,4 +1,4 @@
-// { dg-do run  }
+// { dg-do run { target c++20_down } }
 // Shows that problem of initializing one object's secondary base from
 // another object via a user defined copy constructor for that base,
 // the pointer for the secondary vtable is not set after implicit
@@ -10,6 +10,8 @@
 // g++ prints A::beefy, which is wrong.  Cfront gets it right.
 
 // prms-id: 2846
+
+// This test fails in C++23 due to P2266.
 
 extern "C" int printf(const char *, ...);
 extern "C" void exit(int);
