@@ -9007,14 +9007,34 @@ vectorizable_induction (loop_vec_info loop_vinfo,
     iv_loop = loop;
   gcc_assert (iv_loop == (gimple_bb (phi))->loop_father);
 
-  if (slp_node && !nunits.is_constant ())
+  if (slp_node)
     {
-      /* The current SLP code creates the step value element-by-element.  */
-      if (dump_enabled_p ())
-	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-			 "SLP induction not supported for variable-length"
-			 " vectors.\n");
-      return false;
+      if (!nunits.is_constant ())
+	{
+	  /* The current SLP code creates the step value element-by-element.  */
+	  if (dump_enabled_p ())
+	    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+			     "SLP induction not supported for variable-length"
+			     " vectors.\n");
+	  return false;
+	}
+
+      stmt_vec_info phi_info;
+      FOR_EACH_VEC_ELT (SLP_TREE_SCALAR_STMTS (slp_node), i, phi_info)
+	{
+	  if (STMT_VINFO_LOOP_PHI_EVOLUTION_TYPE (phi_info) != vect_step_op_add)
+	    {
+	      /* The below SLP code assume all induction type to be the same.
+		 But slp in other place will still vectorize the loop via updating
+		 iv update separately + vec_perm, but not from below codes.  */
+	      if (dump_enabled_p ())
+		dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				 "SLP induction not supported for mixed induction type"
+				 " vectors.\n");
+	      return false;
+	    }
+	}
+
     }
 
   if (FLOAT_TYPE_P (vectype) && !param_vect_induction_float)
