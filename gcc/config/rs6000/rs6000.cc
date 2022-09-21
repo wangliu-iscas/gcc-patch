@@ -6408,6 +6408,12 @@ easy_altivec_constant (rtx op, machine_mode mode)
 	  && INTVAL (CONST_VECTOR_ELT (op, 1)) == -1)
 	return 8;
 
+      /* If V2DI constant is within RANGE (-16, 15), it can be synthesized with
+	 a vspltisw and a vupkhsw.  */
+      int value = 32;
+      if (vspltisw_constant_p (op, mode, &value))
+	return 8;
+
       return 0;
     }
 
@@ -6605,6 +6611,69 @@ xxspltib_constant_p (rtx op,
      constant to V8HImode or V4SImode.  */
   else
     *num_insns_ptr = 2;
+
+  *constant_ptr = (int) value;
+  return true;
+}
+
+/* Return true if OP mode is V2DI and can be synthesized with ISA 2.07
+   instructions vupkhsw and vspltisw.
+
+   Return the constant that is being split via CONSTANT_PTR.  */
+
+bool
+vspltisw_constant_p (rtx op, machine_mode mode, int *constant_ptr)
+{
+  HOST_WIDE_INT value;
+  rtx element;
+
+  *constant_ptr = 32;
+
+  if (!TARGET_P8_VECTOR)
+    return false;
+
+  if (mode == VOIDmode)
+    mode = GET_MODE (op);
+  else if (mode != GET_MODE (op) && GET_MODE (op) != VOIDmode)
+    return false;
+
+  if (mode != V2DImode)
+    return false;
+
+  if (GET_CODE (op) == VEC_DUPLICATE)
+    {
+      element = XEXP (op, 0);
+
+      if (!CONST_INT_P (element))
+	return false;
+
+      value = INTVAL (element);
+      if (value == 0 || value == 1
+	  || !EASY_VECTOR_15 (value))
+	return false;
+    }
+
+  else if (GET_CODE (op) == CONST_VECTOR)
+    {
+      element = CONST_VECTOR_ELT (op, 0);
+
+      if (!CONST_INT_P (element))
+	return false;
+
+      value = INTVAL (element);
+      if (value == 0 || value == 1
+	  || !EASY_VECTOR_15 (value))
+	return false;
+
+      element = CONST_VECTOR_ELT (op, 1);
+      if (!CONST_INT_P (element))
+	return false;
+
+      if (value != INTVAL (element))
+	return false;
+    }
+  else
+    return false;
 
   *constant_ptr = (int) value;
   return true;

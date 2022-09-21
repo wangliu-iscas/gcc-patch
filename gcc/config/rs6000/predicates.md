@@ -694,6 +694,19 @@
   return num_insns > 1;
 })
 
+;; Return true if the operand is a constant that can be loaded with a vspltisw
+;; instruction and then a vupkhsw instruction.
+
+(define_predicate "vspltisw_constant_split"
+  (match_code "const_vector,vec_duplicate")
+{
+  int value = 32;
+
+  if (!vspltisw_constant_p (op, mode, &value))
+    return false;
+
+  return true;
+})
 
 ;; Return 1 if the operand is constant that can loaded directly with a XXSPLTIB
 ;; instruction.

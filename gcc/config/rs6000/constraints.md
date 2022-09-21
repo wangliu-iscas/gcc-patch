@@ -150,6 +150,10 @@
   "@internal Vector constant that can be loaded with XXSPLTIB & sign extension."
   (match_test "xxspltib_constant_split (op, mode)"))
 
+(define_constraint "wT"
+  "@internal Vector constant that can be loaded with vspltisw & vupkhsw."
+  (match_test "vspltisw_constant_split (op, mode)"))
+
 ;; ISA 3.0 DS-form instruction that has the bottom 2 bits 0 and no update form.
 ;; Used by LXSD/STXSD/LXSSP/STXSSP.  In contrast to "Y", the multiple-of-four
 ;; offset is enforced for 32-bit too.
