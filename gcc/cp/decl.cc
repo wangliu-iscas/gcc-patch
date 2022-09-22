@@ -18235,9 +18235,11 @@ maybe_register_incomplete_var (tree var)
 	{
 	  /* When the outermost open class is complete we can resolve any
 	     pointers-to-members.  */
-	  tree context = outermost_open_class ();
-	  incomplete_var iv = {var, context};
-	  vec_safe_push (incomplete_vars, iv);
+	  if (tree context = outermost_open_class ())
+	    {
+	      incomplete_var iv = {var, context};
+	      vec_safe_push (incomplete_vars, iv);
+	    }
 	}
     }
 }
