@@ -7620,6 +7620,31 @@ build_offset_type (tree basetype, tree type)
   return t;
 }
 
+/* Create a floating point type with PRECISION.  */
+
+tree
+build_float_type (unsigned precision)
+{
+  tree type = make_node (REAL_TYPE);
+  TYPE_PRECISION (type) = precision;
+  layout_type (type);
+
+  if (flag_finite_math_only)
+    {
+      REAL_VALUE_TYPE min, max;
+      real_min_representable (&min, type);
+      real_max_representable (&max, type);
+      TYPE_MIN_VALUE (type) = build_real (type, min);
+      TYPE_MAX_VALUE (type) = build_real (type, max);
+    }
+  else
+    {
+      TYPE_MIN_VALUE (type) = build_real (type, dconstninf);
+      TYPE_MAX_VALUE (type) = build_real (type, dconstinf);
+    }
+  return type;
+}
+
 /* Create a complex type whose components are COMPONENT_TYPE.
 
    If NAMED is true, the type is given a TYPE_NAME.  We do not always
@@ -9427,17 +9452,9 @@ build_common_tree_nodes (bool signed_char)
 
   pointer_sized_int_node = build_nonstandard_integer_type (POINTER_SIZE, 1);
 
-  float_type_node = make_node (REAL_TYPE);
-  TYPE_PRECISION (float_type_node) = FLOAT_TYPE_SIZE;
-  layout_type (float_type_node);
-
-  double_type_node = make_node (REAL_TYPE);
-  TYPE_PRECISION (double_type_node) = DOUBLE_TYPE_SIZE;
-  layout_type (double_type_node);
-
-  long_double_type_node = make_node (REAL_TYPE);
-  TYPE_PRECISION (long_double_type_node) = LONG_DOUBLE_TYPE_SIZE;
-  layout_type (long_double_type_node);
+  float_type_node = build_float_type (FLOAT_TYPE_SIZE);
+  double_type_node = build_float_type (DOUBLE_TYPE_SIZE);
+  long_double_type_node = build_float_type (LONG_DOUBLE_TYPE_SIZE);
 
   for (i = 0; i < NUM_FLOATN_NX_TYPES; i++)
     {

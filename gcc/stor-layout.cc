@@ -43,6 +43,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "attribs.h"
 #include "debug.h"
 #include "calls.h"
+#include "real.h"
 
 /* Data type for the expressions representing sizes of data types.
    It is the first integer type laid out.  */
