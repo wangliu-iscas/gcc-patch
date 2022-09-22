@@ -1363,6 +1363,186 @@ dse_optimize_call (gimple_stmt_iterator *gsi, sbitmap live_bytes)
   return true;
 }
 
+/* Search the stores_queue to see whether there is a store has a same vdef
+   as the stmt.  */
+
+static bool
+dse_search_def_stores (function *fun, auto_vec<gimple *> &stores_queue,
+		       gimple *stmt)
+{
+  /* Consider the following sequcence:
+    a[i_18] = _5;
+    _8 = e[i_18];
+    _9 = _3 * _8;
+    _10 = _5 + _9;
+    b[i_18] = _10;
+    _12 = i_18 + 1;
+    _13 = a[_12];
+    _15 = _3 * _13;
+    _16 = _10 + _15;
+    a[i_18] = _16
+
+    We should be able to remove a[i_18] = _5.  */
+  for (unsigned int i = 0; i < stores_queue.length (); ++i)
+    {
+      if (!stores_queue[i])
+	continue;
+      tree lhs1 = gimple_assign_lhs (stores_queue[i]);
+      tree lhs2 = gimple_assign_lhs (stmt);
+
+      if (TREE_CODE (lhs1) != TREE_CODE (lhs2))
+	continue;
+      if (operand_equal_p (gimple_assign_lhs (stores_queue[i]),
+			   gimple_assign_lhs (stmt), OEP_ADDRESS_OF))
+	{
+	  /* No matter it can be eliminated or not, remove it
+	     in the worklist.  */
+	  stores_queue[i] = NULL;
+	  if (gimple_assign_single_p (stmt) && !gimple_has_side_effects (stmt)
+	      && !is_ctrl_altering_stmt (stmt)
+	      && (!stmt_could_throw_p (fun, stmt)
+		  || fun->can_delete_dead_exceptions))
+	    return true;
+	}
+    }
+
+  return false;
+}
+
+/* Return true if the TREE_CODE of the mem op is allowed to do dse
+   according to def-ref analysis.  */
+
+static bool
+dse_can_def_ref_p (gimple *stmt)
+{
+  /*TODO: For now, we only support dse according to
+    def-ref analysis for ARRAY_REF.  */
+  return TREE_CODE (gimple_assign_lhs (stmt)) == ARRAY_REF;
+}
+
+/* Perform def-ref analysis on all the stores of stores_queue worklist.
+   Since dse is running on reverse program order walk, the stores in
+   stores_queue are always after stmt, clear the store in the stores_queue
+   if the address of store lhs is changed or the lhs of store is used
+   in stmt.  */
+
+static void
+dse_def_ref_analysis (gimple *stmt, auto_vec<gimple *> &stores_queue)
+{
+  for (unsigned int i = 0; i < stores_queue.length (); ++i)
+    {
+      if (!stores_queue[i])
+	continue;
+
+      /* If we meet non-call or non-assign statement, we disable the possible
+       * dse.  */
+      if (gimple_code (stmt) != GIMPLE_CALL
+	  && gimple_code (stmt) != GIMPLE_ASSIGN)
+	{
+	  stores_queue[i] = NULL;
+	  continue;
+	}
+
+      tree lhs = gimple_get_lhs (stores_queue[i]);
+      if (!lhs)
+	continue;
+      switch (TREE_CODE (lhs))
+	{
+	  /* Handle the array like a[i_18]:
+	     1.if i_18 is changed in stmt which means lhs of stmt == i_18,
+	       we remove the store from the stores_queue.
+
+	     2.a or a[i_18] is used in stmt, we remove the store from the
+	       stores_queue.  */
+	  case ARRAY_REF: {
+	    if (gimple_get_lhs (stmt)
+		&& operand_equal_p (gimple_get_lhs (stmt),
+				    TREE_OPERAND (lhs, 1), 0))
+	      {
+		stores_queue[i] = NULL;
+		continue;
+	      }
+
+	    for (unsigned int j = 0; j < gimple_num_ops (stmt); ++j)
+	      {
+		tree op = gimple_op (stmt, j);
+		if (!op)
+		  continue;
+
+		/* We only check the use op.  */
+		if (op == gimple_get_lhs (stmt))
+		  continue;
+
+		if (TREE_OPERAND_LENGTH (op) == 0)
+		  {
+		    if (operand_equal_p (op, lhs, 0)
+			|| operand_equal_p (op, TREE_OPERAND (lhs, 0), 0))
+		      stores_queue[i] = NULL;
+		  }
+		else
+		  {
+		    for (int k = 0; k < TREE_OPERAND_LENGTH (op); ++k)
+		      {
+			if (!TREE_OPERAND (op, k))
+			  continue;
+
+			if (TREE_CODE (op) == ARRAY_REF)
+			  {
+			    /*
+			    Disable optimization like this:
+			      a[i_18] = _5;
+			      ...
+			      foo (a[i_18]).
+
+			    Don't disable optimization like this:
+			      a[i_18] = _5;
+			      ...
+			      foo (a[i_12]).
+			    */
+			    if (operand_equal_p (op, lhs, OEP_ADDRESS_OF))
+			      {
+				stores_queue[i] = NULL;
+				break;
+			      }
+			  }
+			else
+			  {
+			    /* To be conservative, if TREE_OPERAND (op, k)
+			       length > 1. Disable the possible dse
+			       optimization.
+			    Disable optimization like this:
+			      a[i_18] = _5;
+			      ...
+			      foo (&a).
+
+			    Or
+			      a[i_18] = _5;
+			      ...
+			      foo (test (&a)).
+			    */
+			    if (TREE_OPERAND_LENGTH (TREE_OPERAND (op, k)) > 0
+				|| operand_equal_p (TREE_OPERAND (op, k), lhs,
+						    0)
+				|| operand_equal_p (TREE_OPERAND (op, k),
+						    TREE_OPERAND (lhs, 0), 0))
+			      {
+				stores_queue[i] = NULL;
+				break;
+			      }
+			  }
+		      }
+		  }
+		if (!stores_queue[i])
+		  break;
+	      }
+	  }
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+    }
+}
+
 /* Attempt to eliminate dead stores in the statement referenced by BSI.
 
    A dead store is a store into a memory location which will later be
@@ -1375,7 +1555,8 @@ dse_optimize_call (gimple_stmt_iterator *gsi, sbitmap live_bytes)
    post dominates the first store, then the first store is dead.  */
 
 static void
-dse_optimize_stmt (function *fun, gimple_stmt_iterator *gsi, sbitmap live_bytes)
+dse_optimize_stmt (function *fun, gimple_stmt_iterator *gsi, sbitmap live_bytes,
+		   auto_vec<gimple *> &stores_queue)
 {
   gimple *stmt = gsi_stmt (*gsi);
 
@@ -1500,7 +1681,25 @@ dse_optimize_stmt (function *fun, gimple_stmt_iterator *gsi, sbitmap live_bytes)
 					 byte_tracking_enabled,
 					 live_bytes, &by_clobber_p);
       if (store_status == DSE_STORE_LIVE)
-	return;
+	{
+	  if (gimple_assign_single_p (stmt) && !gimple_has_side_effects (stmt)
+	      && !is_ctrl_altering_stmt (stmt)
+	      && (!stmt_could_throw_p (fun, stmt)
+		  || fun->can_delete_dead_exceptions))
+	    {
+	      if (dse_search_def_stores (fun, stores_queue, stmt))
+		;
+	      else if (dse_can_def_ref_p (stmt))
+		{
+		  stores_queue.safe_push (stmt);
+		  return;
+		}
+	      else
+		return;
+	    }
+	  else
+	    return;
+	}
 
       if (store_status == DSE_STORE_MAYBE_PARTIAL_DEAD)
 	{
@@ -1606,13 +1805,17 @@ pass_dse::execute (function *fun)
     {
       basic_block bb = BASIC_BLOCK_FOR_FN (fun, rpo[i-1]);
       gimple_stmt_iterator gsi;
+      /* Queue the stores which potentially updates mem of a previous
+	 redundant store.  We only do the optimization within a basic block.  */
+      auto_vec<gimple *> stores_queue;
 
       for (gsi = gsi_last_bb (bb); !gsi_end_p (gsi);)
 	{
 	  gimple *stmt = gsi_stmt (gsi);
+	  dse_def_ref_analysis (stmt, stores_queue);
 
 	  if (gimple_vdef (stmt))
-	    dse_optimize_stmt (fun, &gsi, live_bytes);
+	    dse_optimize_stmt (fun, &gsi, live_bytes, stores_queue);
 	  else if (def_operand_p
 		     def_p = single_ssa_def_operand (stmt, SSA_OP_DEF))
 	    {
