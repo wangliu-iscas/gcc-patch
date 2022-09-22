@@ -593,6 +593,8 @@ extern void dump_value_range (FILE *, const vrange *);
 extern bool vrp_val_is_min (const_tree);
 extern bool vrp_val_is_max (const_tree);
 extern bool vrp_operand_equal_p (const_tree, const_tree);
+inline void real_max_representable (REAL_VALUE_TYPE *r, const_tree type);
+inline void real_min_representable (REAL_VALUE_TYPE *r, const_tree type);
 
 inline value_range_kind
 vrange::kind () const
@@ -1009,7 +1011,15 @@ vrp_val_max (const_tree type)
       return wide_int_to_tree (const_cast<tree> (type), max);
     }
   if (frange::supports_p (type))
-    return build_real (const_cast <tree> (type), dconstinf);
+    {
+      if (flag_finite_math_only)
+	{
+	  REAL_VALUE_TYPE r;
+	  real_max_representable (&r, type);
+	  return build_real (const_cast <tree> (type), r);
+	}
+      return build_real (const_cast <tree> (type), dconstinf);
+    }
   return NULL_TREE;
 }
 
@@ -1023,7 +1033,15 @@ vrp_val_min (const_tree type)
   if (POINTER_TYPE_P (type))
     return build_zero_cst (const_cast<tree> (type));
   if (frange::supports_p (type))
-    return build_real (const_cast <tree> (type), dconstninf);
+    {
+      if (flag_finite_math_only)
+	{
+	  REAL_VALUE_TYPE r;
+	  real_min_representable (&r, type);
+	  return build_real (const_cast <tree> (type), r);
+	}
+      return build_real (const_cast <tree> (type), dconstninf);
+    }
   return NULL_TREE;
 }
 
@@ -1073,8 +1091,8 @@ frange::set_varying (tree type)
 {
   m_kind = VR_VARYING;
   m_type = type;
-  m_min = dconstninf;
-  m_max = dconstinf;
+  m_min = *TREE_REAL_CST_PTR (vrp_val_min (type));
+  m_max = *TREE_REAL_CST_PTR (vrp_val_max (type));
   m_pos_nan = true;
   m_neg_nan = true;
 }
@@ -1133,7 +1151,7 @@ frange::clear_nan ()
 // Set R to maximum representable value for TYPE.
 
 inline void
-real_max_representable (REAL_VALUE_TYPE *r, tree type)
+real_max_representable (REAL_VALUE_TYPE *r, const_tree type)
 {
   char buf[128];
   get_max_float (REAL_MODE_FORMAT (TYPE_MODE (type)),
@@ -1145,7 +1163,7 @@ real_max_representable (REAL_VALUE_TYPE *r, tree type)
 // Set R to minimum representable value for TYPE.
 
 inline void
-real_min_representable (REAL_VALUE_TYPE *r, tree type)
+real_min_representable (REAL_VALUE_TYPE *r, const_tree type)
 {
   real_max_representable (r, type);
   *r = real_value_negate (r);
