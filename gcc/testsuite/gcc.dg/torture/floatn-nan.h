@@ -30,10 +30,20 @@ main (void)
 {
   volatile TYPE r;
   r = nan_cst + nan_cst;
+#if defined(__ARM_FP) && __ARM_FP == 4 && (EXT || WIDTH > 32)
+  /* Arm with SP FPU does not support exceptions (see pr102017).  */
+  if (!fetestexcept (FE_INVALID))
+#else
   if (fetestexcept (FE_INVALID))
+#endif
     abort ();
   r = nans_cst + nans_cst;
+#if defined(__ARM_FP) && __ARM_FP == 4 && (EXT || WIDTH > 32)
+  /* Arm with SP FPU does not support exceptions (see pr102017).  */
+  if (fetestexcept (FE_INVALID))
+#else
   if (!fetestexcept (FE_INVALID))
+#endif
     abort ();
   exit (0);
 }

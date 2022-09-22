@@ -19,7 +19,12 @@ main (void)
   double r = x ();
   if (!__builtin_isnan (r))
 	abort ();
+#if defined(__ARM_FP) && __ARM_FP == 4
+  /* Arm with SP FPU does not support exceptions (see pr102017).  */
+  if (fetestexcept (FE_INVALID))
+#else
   if (!fetestexcept (FE_INVALID))
+#endif
 	abort ();
   exit (0);
 }
