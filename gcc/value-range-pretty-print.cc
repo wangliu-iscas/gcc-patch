@@ -117,6 +117,16 @@ vrange_printer::print_irange_bitmasks (const irange &r) const
   pp_string (pp, buf);
 }
 
+void
+vrange_printer::print_real_value (tree type, const REAL_VALUE_TYPE &r) const
+{
+  char s[60];
+  tree t = build_real (type, r);
+  dump_generic_node (pp, t, 0, TDF_NONE, false);
+  real_to_hexadecimal (s, &r, sizeof (s), 0, 1);
+  pp_printf (pp, " (%s)", s);
+}
+
 // Print an frange.
 
 void
@@ -141,11 +151,9 @@ vrange_printer::visit (const frange &r) const
   bool has_endpoints = !r.known_isnan ();
   if (has_endpoints)
     {
-      dump_generic_node (pp,
-			 build_real (type, r.lower_bound ()), 0, TDF_NONE, false);
+      print_real_value (type, r.lower_bound ());
       pp_string (pp, ", ");
-      dump_generic_node (pp,
-			 build_real (type, r.upper_bound ()), 0, TDF_NONE, false);
+      print_real_value (type, r.upper_bound ());
     }
   pp_character (pp, ']');
   print_frange_nan (r);
