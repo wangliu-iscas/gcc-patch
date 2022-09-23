@@ -7631,7 +7631,12 @@ lower_oacc_reductions (location_t loc, tree clauses, tree level, bool inner,
 	      incoming = build_simple_mem_ref (incoming);
 	  }
 	else
-	  v1 = v2 = v3 = var;
+	  {
+	    v1 = unshare_expr (var);
+	    v2 = unshare_expr (var);
+	    v3 = unshare_expr (var);
+	    outgoing = unshare_expr (outgoing);
+	  }
 
 	/* Determine position in reduction buffer, which may be used
 	   by target.  The parser has ensured that this is not a
@@ -7659,21 +7664,23 @@ lower_oacc_reductions (location_t loc, tree clauses, tree level, bool inner,
 	  = build_call_expr_internal_loc (loc, IFN_GOACC_REDUCTION,
 					  TREE_TYPE (var), 6, setup_code,
 					  unshare_expr (ref_to_res),
-					  incoming, level, op, off);
+					  unshare_expr (incoming), level,
+					  op, off);
 	tree init_call
 	  = build_call_expr_internal_loc (loc, IFN_GOACC_REDUCTION,
 					  TREE_TYPE (var), 6, init_code,
 					  unshare_expr (ref_to_res),
-					  v1, level, op, off);
+					  unshare_expr (v1), level, op, off);
 	tree fini_call
 	  = build_call_expr_internal_loc (loc, IFN_GOACC_REDUCTION,
 					  TREE_TYPE (var), 6, fini_code,
 					  unshare_expr (ref_to_res),
-					  v2, level, op, off);
+					  unshare_expr (v2), level, op, off);
 	tree teardown_call
 	  = build_call_expr_internal_loc (loc, IFN_GOACC_REDUCTION,
 					  TREE_TYPE (var), 6, teardown_code,
-					  ref_to_res, v3, level, op, off);
+					  ref_to_res, unshare_expr (v3),
+					  level, op, off);
 
 	gimplify_assign (v1, setup_call, &before_fork);
 	gimplify_assign (v2, init_call, &after_fork);
