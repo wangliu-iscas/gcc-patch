@@ -16,6 +16,11 @@
   #define SA_RESTART 0
 #endif
 
+// Workaround for https://sourceware.org/bugzilla/show_bug.cgi?id=27417
+#if __linux__ && !defined(sigev_notify_thread_id)
+  #define sigev_notify_thread_id _sigev_un._tid
+#endif
+
 #ifdef USING_SPLIT_STACK
 
 extern void __splitstack_getcontext(void *context[10]);
@@ -181,6 +186,16 @@ void
 setSigactionHandler(struct sigaction* sa, uintptr handler)
 {
 	sa->sa_sigaction = (void*)(handler);
+}
+
+void setProcID(uintptr_t, int32_t)
+	__asm__ (GOSYM_PREFIX "runtime.setProcID");
+
+void
+setProcID(uintptr_t ptr, int32_t v)
+{
+	struct sigevent *s = (void *)ptr;
+	s->sigev_notify_thread_id = v;
 }
 
 // C code to fetch values from the siginfo_t and ucontext_t pointers

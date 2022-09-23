@@ -22,6 +22,8 @@ type mOS struct {
 	profileTimerValid uint32
 }
 
+func setProcID(uintptr, int32)
+
 func getProcID() uint64 {
 	return uint64(gettid())
 }
@@ -365,7 +367,7 @@ func setThreadCPUProfiler(hz int32) {
 	var sevp _sigevent
 	sevp.sigev_notify = _SIGEV_THREAD_ID
 	sevp.sigev_signo = _SIGPROF
-	*((*int32)(unsafe.Pointer(&sevp._sigev_un))) = int32(mp.procid)
+	setProcID(uintptr(unsafe.Pointer(&sevp)), int32(mp.procid))
 	ret := timer_create(_CLOCK_THREAD_CPUTIME_ID, &sevp, &timerid)
 	if ret != 0 {
 		// If we cannot create a timer for this M, leave profileTimerValid false
