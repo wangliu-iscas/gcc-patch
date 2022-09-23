@@ -47,6 +47,7 @@
 #endif
 
 /* Support for a compile-time default CPU, et cetera.  The rules are:
+   --with-abi is ignored if -mabi is specified.
    --with-cpu is ignored if -mcpu is specified; likewise --with-cpu-32
      and --with-cpu-64.
    --with-tune is ignored if -mtune or -mcpu is specified; likewise
@@ -54,7 +55,7 @@
    --with-float is ignored if -mhard-float or -msoft-float are
      specified.  */
 #define OPTION_DEFAULT_SPECS \
-  {"abi", "%{!mabi=elfv*:-mabi=%(VALUE)}" }, \
+  {"abi", "%{!mabi=*:-mabi=%(VALUE)}" }, \
   {"tune", "%{!mtune=*:%{!mcpu=*:-mtune=%(VALUE)}}" }, \
   {"tune_32", "%{" OPT_ARCH32 ":%{!mtune=*:%{!mcpu=*:-mtune=%(VALUE)}}}" }, \
   {"tune_64", "%{" OPT_ARCH64 ":%{!mtune=*:%{!mcpu=*:-mtune=%(VALUE)}}}" }, \
