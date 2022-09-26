@@ -48,6 +48,8 @@ extern void __VLTChangePermission (int);
 #else 
 #if defined(__sun__) && defined(__svr4__) && defined(__sparc__)
 #define VTV_PAGE_SIZE 8192
+#elif defined(__loongarch__)
+#define VTV_PAGE_SIZE 16384
 #else
 #define VTV_PAGE_SIZE 4096
 #endif
