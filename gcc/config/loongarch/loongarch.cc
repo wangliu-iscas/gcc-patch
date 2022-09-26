@@ -63,6 +63,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "context.h"
 #include "builtins.h"
 #include "rtl-iter.h"
+#include "opts.h"
 
 /* This file should be included last.  */
 #include "target-def.h"
@@ -6095,6 +6096,16 @@ loongarch_option_override_internal (struct gcc_options *opts)
      default.  */
   if (loongarch_branch_cost == 0)
     loongarch_branch_cost = loongarch_cost->branch_cost;
+
+  const loongarch_cache &tune_cache =
+    loongarch_cpu_cache[la_target.cpu_tune];
+
+  SET_OPTION_IF_UNSET (opts, &global_options_set, param_l1_cache_line_size,
+		       tune_cache.l1d_line_size);
+  SET_OPTION_IF_UNSET (opts, &global_options_set, param_l1_cache_size,
+		       tune_cache.l1d_size);
+  SET_OPTION_IF_UNSET (opts, &global_options_set, param_l2_cache_size,
+		       tune_cache.l2d_size);
 
   if (TARGET_DIRECT_EXTERN_ACCESS && flag_shlib)
     error ("%qs cannot be used for compiling a shared library",
