@@ -2246,6 +2246,7 @@ is_convertible (tree from, tree to)
 {
   if (VOID_TYPE_P (from) && VOID_TYPE_P (to))
     return true;
+  cp_unevaluated u;
   tree expr = build_stub_object (from);
   expr = perform_implicit_conversion (to, expr, tf_none);
   if (expr == error_mark_node)
