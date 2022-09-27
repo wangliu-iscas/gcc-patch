@@ -48,6 +48,10 @@ extern void __VLTChangePermission (int);
 #else 
 #if defined(__sun__) && defined(__svr4__) && defined(__sparc__)
 #define VTV_PAGE_SIZE 8192
+/* LoongArch architecture 64-bit system supports 4k,16k and 64k
+   page size, which is set to the maximum value here.  */
+#elif defined(__loongarch_lp64)
+#define VTV_PAGE_SIZE 65536
 #else
 #define VTV_PAGE_SIZE 4096
 #endif

@@ -212,6 +212,11 @@ __vtv_malloc_init (void)
 
 #if defined (__CYGWIN__) || defined (__MINGW32__)
   if (VTV_PAGE_SIZE != sysconf_SC_PAGE_SIZE())
+#elif defined (__loongarch_lp64)
+  /* I think that under the LoongArch 64-bit system, VTV_PAGE_SIZE is set
+     to the maximum value of 64K supported by the system, so there is no
+     need to judge here.  */
+  if (false)
 #else
   if (VTV_PAGE_SIZE != sysconf (_SC_PAGE_SIZE))
 #endif
