@@ -368,6 +368,9 @@ extern const char *s390_host_detect_local_cpu (int argc, const char **argv);
 /* Allocation boundary (in *bits*) for the code of a function.  */
 #define FUNCTION_BOUNDARY 64
 
+/* Alignment required for a code label, in bits.  */
+#define CODE_LABEL_BOUNDARY 16
+
 /* There is no point aligning anything to a rounder boundary than this.  */
 #define BIGGEST_ALIGNMENT 64
 
