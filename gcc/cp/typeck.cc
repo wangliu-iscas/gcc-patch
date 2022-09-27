@@ -11042,8 +11042,13 @@ check_return_expr (tree retval, bool *no_warning)
 	 the conditions for the named return value optimization.  */
       bool converted = false;
       tree moved;
-      /* This is only interesting for class type.  */
-      if (CLASS_TYPE_P (functype)
+      /* Until C++23, this was only interesting for class type...  */
+      if ((CLASS_TYPE_P (functype)
+	   /* ...but in C++23, we should do the below when we're converting
+	      from/to a class/reference (a non-scalar type).  */
+	   || (cxx_dialect >= cxx23
+	       && (!SCALAR_TYPE_P (functype)
+		   || !SCALAR_TYPE_P (TREE_TYPE (retval)))))
 	  && (moved = treat_lvalue_as_rvalue_p (retval, /*return*/true)))
 	{
 	  if (cxx_dialect < cxx20)
