@@ -1455,4 +1455,9 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 typedef TARGET_UNIT target_unit;
 #endif
 
+/* Alignment required for a code label, in bits.  */
+#ifndef CODE_LABEL_BOUNDARY
+#define CODE_LABEL_BOUNDARY BITS_PER_UNIT
+#endif
+
 #endif  /* ! GCC_DEFAULTS_H */

@@ -1075,6 +1075,10 @@ to a value equal to or larger than @code{STACK_BOUNDARY}.
 Alignment required for a function entry point, in bits.
 @end defmac
 
+@defmac CODE_LABEL_BOUNDARY
+Alignment required for a code label, in bits.
+@end defmac
+
 @defmac BIGGEST_ALIGNMENT
 Biggest alignment that any data type can require on this machine, in
 bits.  Note that this is not the biggest alignment that is supported,
