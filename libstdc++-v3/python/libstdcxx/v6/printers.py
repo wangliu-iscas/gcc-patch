@@ -1857,7 +1857,7 @@ class Printer(object):
     # Add a name using _GLIBCXX_BEGIN_NAMESPACE_VERSION.
     def add_version(self, base, name, function):
         self.add(base + name, function)
-        if _versioned_namespace:
+        if _versioned_namespace and not '__cxx11' in base:
             vbase = re.sub('^(std|__gnu_cxx)::', r'\g<0>%s' % _versioned_namespace, base)
             self.add(vbase + name, function)
 
@@ -2026,7 +2026,7 @@ def add_one_template_type_printer(obj, name, defargs):
     printer = TemplateTypePrinter('std::__debug::'+name, defargs)
     gdb.types.register_type_printer(obj, printer)
 
-    if _versioned_namespace:
+    if _versioned_namespace and not '__cxx11' in name:
         # Add second type printer for same type in versioned namespace:
         ns = 'std::' + _versioned_namespace
         # PR 86112 Cannot use dict comprehension here:
@@ -2080,6 +2080,21 @@ class FilteringTypePrinter(object):
                     pass
             if self.type_obj == type_obj:
                 return strip_inline_namespaces(self.name)
+
+            if self.type_obj is None:
+                return None
+
+            # Workaround ambiguous typedefs matching both std:: and std::__cxx11:: symbols.
+            ambiguous = False
+            for ch in ('', 'w', 'u8', 'u16', 'u32'):
+                if self.name == 'std::' + ch + 'string':
+                    ambiguous = True
+                    break
+
+            if ambiguous:
+                if self.type_obj.tag.replace('__cxx11::', '') == type_obj.tag.replace('__cxx11::', ''):
+                    return strip_inline_namespaces(self.name)
+
             return None
 
     def instantiate(self):
@@ -2089,7 +2104,7 @@ class FilteringTypePrinter(object):
 def add_one_type_printer(obj, match, name):
     printer = FilteringTypePrinter('std::' + match, 'std::' + name)
     gdb.types.register_type_printer(obj, printer)
-    if _versioned_namespace:
+    if _versioned_namespace and not '__cxx11' in match:
         ns = 'std::' + _versioned_namespace
         printer = FilteringTypePrinter(ns + match, ns + name)
         gdb.types.register_type_printer(obj, printer)
@@ -2101,29 +2116,26 @@ def register_type_printers(obj):
         return
 
     # Add type printers for typedefs std::string, std::wstring etc.
-    for ch in ('', 'w', 'u8', 'u16', 'u32'):
-        add_one_type_printer(obj, 'basic_string', ch + 'string')
-        add_one_type_printer(obj, '__cxx11::basic_string', ch + 'string')
-        # Typedefs for __cxx11::basic_string used to be in namespace __cxx11:
-        add_one_type_printer(obj, '__cxx11::basic_string',
-                             '__cxx11::' + ch + 'string')
-        add_one_type_printer(obj, 'basic_string_view', ch + 'string_view')
+    for ch in (('char', ''), ('wchar_t', 'w'), ('char8_t', 'u8'), ('char16_t', 'u16'), ('char32_t', 'u32')):
+        add_one_type_printer(obj, 'basic_string<' + ch[0], ch[1] + 'string')
+        add_one_type_printer(obj, '__cxx11::basic_string<' + ch[0], '__cxx11::' + ch[1] + 'string')
+        add_one_type_printer(obj, 'basic_string_view<' + ch[0], ch[1] + 'string_view')
 
     # Add type printers for typedefs std::istream, std::wistream etc.
-    for ch in ('', 'w'):
+    for ch in (('char', ''), ('wchar_t', 'w')):
         for x in ('ios', 'streambuf', 'istream', 'ostream', 'iostream',
                   'filebuf', 'ifstream', 'ofstream', 'fstream'):
-            add_one_type_printer(obj, 'basic_' + x, ch + x)
+            add_one_type_printer(obj, 'basic_' + x + '<' + ch[0], ch[1] + x)
         for x in ('stringbuf', 'istringstream', 'ostringstream',
                   'stringstream'):
-            add_one_type_printer(obj, 'basic_' + x, ch + x)
+            add_one_type_printer(obj, 'basic_' + x, ch[1] + x)
             # <sstream> types are in __cxx11 namespace, but typedefs aren't:
-            add_one_type_printer(obj, '__cxx11::basic_' + x, ch + x)
+            add_one_type_printer(obj, '__cxx11::basic_' + x + '<' + ch[0], ch[1] + x)
 
     # Add type printers for typedefs regex, wregex, cmatch, wcmatch etc.
     for abi in ('', '__cxx11::'):
-        for ch in ('', 'w'):
-            add_one_type_printer(obj, abi + 'basic_regex', abi + ch + 'regex')
+        for ch in (('char', ''), ('wchar_t', 'w')):
+            add_one_type_printer(obj, abi + 'basic_regex<' + ch[0], abi + ch[1] + 'regex')
         for ch in ('c', 's', 'wc', 'ws'):
             add_one_type_printer(obj, abi + 'match_results', abi + ch + 'match')
             for x in ('sub_match', 'regex_iterator', 'regex_token_iterator'):
