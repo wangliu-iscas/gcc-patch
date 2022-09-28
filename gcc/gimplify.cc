@@ -9245,6 +9245,7 @@ omp_group_base (omp_mapping_group *grp, unsigned int *chained,
     case GOMP_MAP_RELEASE:
     case GOMP_MAP_DELETE:
     case GOMP_MAP_FORCE_ALLOC:
+    case GOMP_MAP_IF_PRESENT:
       if (node == grp->grp_end)
 	return node;
 
@@ -9323,7 +9324,6 @@ omp_group_base (omp_mapping_group *grp, unsigned int *chained,
     case GOMP_MAP_FORCE_DEVICEPTR:
     case GOMP_MAP_DEVICE_RESIDENT:
     case GOMP_MAP_LINK:
-    case GOMP_MAP_IF_PRESENT:
     case GOMP_MAP_FIRSTPRIVATE:
     case GOMP_MAP_FIRSTPRIVATE_INT:
     case GOMP_MAP_USE_DEVICE_PTR:
@@ -9859,6 +9859,115 @@ omp_lastprivate_for_combined_outer_constructs (struct gimplify_omp_ctx *octx,
     }
   if (octx && (implicit_p || octx != orig_octx))
     omp_notice_variable (octx, decl, true);
+}
+
+/* If we have mappings INNER and OUTER, where INNER is a component access and
+   OUTER is a mapping of the whole containing struct, check that the mappings
+   are compatible.  We'll be deleting the inner mapping, so we need to make
+   sure the outer mapping does (at least) the same transfers to/from the device
+   as the inner mapping.  */
+
+bool
+omp_check_mapping_compatibility (location_t loc,
+				 omp_mapping_group *outer,
+				 omp_mapping_group *inner)
+{
+  tree first_outer = *outer->grp_start, first_inner = *inner->grp_start;
+
+  gcc_assert (OMP_CLAUSE_CODE (first_outer) == OMP_CLAUSE_MAP);
+  gcc_assert (OMP_CLAUSE_CODE (first_inner) == OMP_CLAUSE_MAP);
+
+  enum gomp_map_kind outer_kind = OMP_CLAUSE_MAP_KIND (first_outer);
+  enum gomp_map_kind inner_kind = OMP_CLAUSE_MAP_KIND (first_inner);
+
+  if (outer_kind == inner_kind)
+    return true;
+
+  switch (outer_kind)
+    {
+    case GOMP_MAP_ALWAYS_TO:
+      if (inner_kind == GOMP_MAP_FORCE_PRESENT
+	  || inner_kind == GOMP_MAP_ALLOC
+	  || inner_kind == GOMP_MAP_TO)
+	return true;
+      break;
+
+    case GOMP_MAP_ALWAYS_FROM:
+      if (inner_kind == GOMP_MAP_FORCE_PRESENT
+	  || inner_kind == GOMP_MAP_ALLOC
+	  || inner_kind == GOMP_MAP_FROM)
+	return true;
+      break;
+
+    case GOMP_MAP_TO:
+    case GOMP_MAP_FROM:
+      if (inner_kind == GOMP_MAP_FORCE_PRESENT
+	  || inner_kind == GOMP_MAP_ALLOC)
+	return true;
+      break;
+
+    case GOMP_MAP_ALWAYS_TOFROM:
+    case GOMP_MAP_TOFROM:
+      if (inner_kind == GOMP_MAP_FORCE_PRESENT
+	  || inner_kind == GOMP_MAP_ALLOC
+	  || inner_kind == GOMP_MAP_TO
+	  || inner_kind == GOMP_MAP_FROM
+	  || inner_kind == GOMP_MAP_TOFROM)
+	return true;
+      break;
+
+    default:
+      ;
+    }
+
+  error_at (loc, "data movement for component %qE is not compatible with "
+	    "movement for struct %qE", OMP_CLAUSE_DECL (first_inner),
+	    OMP_CLAUSE_DECL (first_outer));
+
+  return false;
+}
+
+/* Similar to the above function, but for OpenACC.  The only clause
+   dependencies we handle for now are struct element mappings and whole-struct
+   mappings on the same directive.  */
+
+void
+oacc_resolve_clause_dependencies (vec<omp_mapping_group> *groups,
+				  hash_map<tree_operand_hash,
+					   omp_mapping_group *> *grpmap)
+{
+  int i;
+  omp_mapping_group *grp;
+
+  FOR_EACH_VEC_ELT (*groups, i, grp)
+    {
+      tree grp_end = grp->grp_end;
+      tree decl = OMP_CLAUSE_DECL (grp_end);
+
+      gcc_assert (OMP_CLAUSE_CODE (grp_end) == OMP_CLAUSE_MAP);
+
+      omp_mapping_group **maybe_siblings = grpmap->get (decl);
+
+      if (maybe_siblings
+	  && !(*maybe_siblings)->deleted
+	  && (*maybe_siblings)->sibling)
+	{
+	  error_at (OMP_CLAUSE_LOCATION (grp_end),
+		    "%qE appears more than once in map clauses",
+		    OMP_CLAUSE_DECL (grp_end));
+	  (*maybe_siblings)->deleted = true;
+	}
+
+      omp_mapping_group *struct_group;
+      if (omp_mapped_by_containing_struct (grpmap, decl, &struct_group)
+	  && *grp->grp_start == grp_end)
+	{
+	  omp_check_mapping_compatibility (OMP_CLAUSE_LOCATION (grp_end),
+					   struct_group, grp);
+	  /* Remove the whole of this mapping -- redundant.  */
+	  grp->deleted = true;
+	}
+    }
 }
 
 /* Link node NEWNODE so it is pointed to by chain INSERT_AT.  NEWNODE's chain
@@ -10400,6 +10509,11 @@ omp_build_struct_sibling_lists (enum tree_code code,
       if (DECL_P (decl))
 	continue;
 
+      /* Skip groups we marked for deletion in
+	 oacc_resolve_clause_dependencies.  */
+      if (grp->deleted)
+	continue;
+
       if (OMP_CLAUSE_CHAIN (*grp_start_p)
 	  && OMP_CLAUSE_CHAIN (*grp_start_p) != grp_end)
 	{
@@ -10436,14 +10550,14 @@ omp_build_struct_sibling_lists (enum tree_code code,
       if (TREE_CODE (decl) != COMPONENT_REF)
 	continue;
 
-      /* If we're mapping the whole struct in another node, skip creation of
-	 sibling lists.  */
+      /* If we're mapping the whole struct in another node, skip adding this
+	 node to a sibling list.  */
       omp_mapping_group *wholestruct;
-      if (!(region_type & ORT_ACC)
-	  && omp_mapped_by_containing_struct (*grpmap, OMP_CLAUSE_DECL (c),
-					      &wholestruct))
+      if (omp_mapped_by_containing_struct (*grpmap, OMP_CLAUSE_DECL (c),
+					   &wholestruct))
 	{
-	  if (*grp_start_p == grp_end)
+	  if (!(region_type & ORT_ACC)
+	      && *grp_start_p == grp_end)
 	    /* Remove the whole of this mapping -- redundant.  */
 	    grp->deleted = true;
 
@@ -10632,6 +10746,7 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
 	  hash_map<tree_operand_hash, omp_mapping_group *> *grpmap;
 	  grpmap = omp_index_mapping_groups (groups);
 
+	  oacc_resolve_clause_dependencies (groups, grpmap);
 	  omp_build_struct_sibling_lists (code, region_type, groups, &grpmap,
 					  list_p);
 
