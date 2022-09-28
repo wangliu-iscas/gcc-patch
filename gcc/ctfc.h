@@ -125,6 +125,10 @@ typedef struct GTY (()) ctf_itype
 
 #define CTF_FUNC_VARARG 0x1
 
+/* Enum specific flags.  */
+#define CTF_ENUM_F_NONE                     (0)
+#define CTF_ENUM_F_ENUMERATORS_SIGNED       (1 << 0)
+
 /* Struct/union/enum member definition for CTF generation.  */
 
 typedef struct GTY ((chain_next ("%h.dmd_next"))) ctf_dmdef
@@ -133,7 +137,7 @@ typedef struct GTY ((chain_next ("%h.dmd_next"))) ctf_dmdef
   ctf_id_t dmd_type;		/* Type of this member (for sou).  */
   uint32_t dmd_name_offset;	/* Offset of the name in str table.  */
   uint64_t dmd_offset;		/* Offset of this member in bits (for sou).  */
-  int dmd_value;		/* Value of this member (for enum).  */
+  HOST_WIDE_INT dmd_value;	/* Value of this member (for enum).  */
   struct ctf_dmdef * dmd_next;	/* A list node.  */
 } ctf_dmdef_t;
 
@@ -162,6 +166,7 @@ struct GTY ((for_user)) ctf_dtdef
   bool from_global_func; /* Whether this type was added from a global
 			    function.  */
   uint32_t linkage;           /* Used in function types.  0=local, 1=global.  */
+  uint32_t flags;             /* Flags to describe specific type's properties.  */
   union GTY ((desc ("ctf_dtu_d_union_selector (&%1)")))
   {
     /* struct, union, or enum.  */
@@ -429,7 +434,7 @@ extern ctf_id_t ctf_add_sou (ctf_container_ref, uint32_t, const char *,
 			     uint32_t, size_t, dw_die_ref);
 
 extern int ctf_add_enumerator (ctf_container_ref, ctf_id_t, const char *,
-			       HOST_WIDE_INT, dw_die_ref);
+			       HOST_WIDE_INT, uint32_t, dw_die_ref);
 extern int ctf_add_member_offset (ctf_container_ref, dw_die_ref, const char *,
 				  ctf_id_t, uint64_t);
 extern int ctf_add_function_arg (ctf_container_ref, dw_die_ref,

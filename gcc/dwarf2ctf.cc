@@ -772,6 +772,7 @@ gen_ctf_enumeration_type (ctf_container_ref ctfc, dw_die_ref enumeration)
 	  const char *enumerator_name;
 	  dw_attr_node *enumerator_value;
 	  HOST_WIDE_INT value_wide_int;
+	  uint32_t flags = 0;
 
 	  c = dw_get_die_sib (c);
 
@@ -785,10 +786,14 @@ gen_ctf_enumeration_type (ctf_container_ref ctfc, dw_die_ref enumeration)
 		  == dw_val_class_unsigned_const_implicit))
 	    value_wide_int = AT_unsigned (enumerator_value);
 	  else
-	    value_wide_int = AT_int (enumerator_value);
+	    {
+	      value_wide_int = AT_int (enumerator_value);
+	      flags |= CTF_ENUM_F_ENUMERATORS_SIGNED;
+	    }
 
 	  ctf_add_enumerator (ctfc, enumeration_type_id,
-			      enumerator_name, value_wide_int, enumeration);
+			      enumerator_name, value_wide_int,
+			      flags, enumeration);
 	}
       while (c != dw_get_die_child (enumeration));
   }
