@@ -3645,17 +3645,12 @@ rs6000_option_override_internal (bool global_init_p)
       rs6000_pointer_size = 32;
     }
 
-  /* Some OSs don't support saving the high part of 64-bit registers on context
-     switch.  Other OSs don't support saving Altivec registers.  On those OSs,
-     we don't touch the OPTION_MASK_POWERPC64 or OPTION_MASK_ALTIVEC settings;
-     if the user wants either, the user must explicitly specify them and we
-     won't interfere with the user's specification.  */
+  /* Some OSs don't support saving Altivec registers.  On those OSs, we don't
+     touch the OPTION_MASK_POWERPC64 or OPTION_MASK_ALTIVEC settings; if the
+     user wants either, the user must explicitly specify them and we won't
+     interfere with the user's specification.  */
 
   set_masks = POWERPC_MASKS;
-#ifdef OS_MISSING_POWERPC64
-  if (OS_MISSING_POWERPC64)
-    set_masks &= ~OPTION_MASK_POWERPC64;
-#endif
 #ifdef OS_MISSING_ALTIVEC
   if (OS_MISSING_ALTIVEC)
     set_masks &= ~(OPTION_MASK_ALTIVEC | OPTION_MASK_VSX
@@ -3748,6 +3743,26 @@ rs6000_option_override_internal (bool global_init_p)
     {
       if (TARGET_ALTIVEC)
 	error ("AltiVec not supported in this target");
+    }
+
+  /* With option powerpc64 specified explicitly (either on or off), even if
+     being compiled for 64 bit we don't need to check if it's disabled here,
+     since subtargets will check and raise an error message if necessary
+     later.  But without option powerpc64 specified explicitly, we need to
+     ensure powerpc64 enabled for 64 bit and disabled on those OSes with
+     OS_MISSING_POWERPC64, since they don't support saving the high part of
+     64-bit registers on context switch.  */
+  if (!(rs6000_isa_flags_explicit & OPTION_MASK_POWERPC64))
+    {
+      if (TARGET_64BIT)
+	/* Make sure we always enable it by default for 64 bit.  */
+	rs6000_isa_flags |= OPTION_MASK_POWERPC64;
+#ifdef OS_MISSING_POWERPC64
+      else if (OS_MISSING_POWERPC64)
+	/* It's unexpected to have OPTION_MASK_POWERPC64 on for OSes which
+	   miss powerpc64 support, so disable it.  */
+	rs6000_isa_flags &= ~OPTION_MASK_POWERPC64;
+#endif
     }
 
   /* If we are optimizing big endian systems for space, use the load/store
