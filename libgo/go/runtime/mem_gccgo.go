@@ -15,7 +15,7 @@ import (
 //go:linkname sysFree
 
 //extern mmap
-func sysMmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uintptr) unsafe.Pointer
+func sysMmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off _off_t) unsafe.Pointer
 
 //extern munmap
 func munmap(addr unsafe.Pointer, length uintptr) int32
@@ -38,7 +38,7 @@ func init() {
 }
 
 func mmap(addr unsafe.Pointer, n uintptr, prot, flags, fd int32, off uintptr) (unsafe.Pointer, int) {
-	p := sysMmap(addr, n, prot, flags, fd, off)
+	p := sysMmap(addr, n, prot, flags, fd, _off_t(off))
 	if uintptr(p) == _MAP_FAILED {
 		return nil, errno()
 	}
