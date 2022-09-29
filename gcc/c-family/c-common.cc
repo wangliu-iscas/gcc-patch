@@ -537,19 +537,14 @@ const struct c_common_resword c_common_reswords[] =
   { "volatile",		RID_VOLATILE,	0 },
   { "wchar_t",		RID_WCHAR,	D_CXXONLY },
   { "while",		RID_WHILE,	0 },
-  { "__is_assignable", RID_IS_ASSIGNABLE, D_CXXONLY },
-  { "__is_constructible", RID_IS_CONSTRUCTIBLE, D_CXXONLY },
-  { "__is_nothrow_assignable", RID_IS_NOTHROW_ASSIGNABLE, D_CXXONLY },
-  { "__is_nothrow_constructible", RID_IS_NOTHROW_CONSTRUCTIBLE, D_CXXONLY },
-  { "__is_convertible", RID_IS_CONVERTIBLE, D_CXXONLY },
-  { "__is_nothrow_convertible", RID_IS_NOTHROW_CONVERTIBLE, D_CXXONLY },
   { "__reference_constructs_from_temporary", RID_REF_CONSTRUCTS_FROM_TEMPORARY,
 					D_CXXONLY },
   { "__reference_converts_from_temporary", RID_REF_CONVERTS_FROM_TEMPORARY,
 					D_CXXONLY },
-  { "__remove_cv", RID_REMOVE_CV, D_CXXONLY },
-  { "__remove_reference", RID_REMOVE_REFERENCE, D_CXXONLY },
-  { "__remove_cvref", RID_REMOVE_CVREF, D_CXXONLY },
+#define DEFTRAIT(TCC, CODE, NAME, ARITY) \
+  { NAME, RID_##CODE, D_CXXONLY },
+#include "cp/cp-trait.def"
+#undef DEFTRAIT
 
   /* C++ transactional memory.  */
   { "synchronized",	RID_SYNCHRONIZED, D_CXX_OBJC | D_TRANSMEM },

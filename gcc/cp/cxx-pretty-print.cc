@@ -2701,24 +2701,6 @@ pp_cxx_trait (cxx_pretty_printer *pp, tree t)
     case CPTK_IS_LITERAL_TYPE:
       pp_cxx_ws_string (pp, "__is_literal_type");
       break;
-    case CPTK_IS_ASSIGNABLE:
-      pp_cxx_ws_string (pp, "__is_assignable");
-      break;
-    case CPTK_IS_CONSTRUCTIBLE:
-      pp_cxx_ws_string (pp, "__is_constructible");
-      break;
-    case CPTK_IS_NOTHROW_ASSIGNABLE:
-      pp_cxx_ws_string (pp, "__is_nothrow_assignable");
-      break;
-    case CPTK_IS_NOTHROW_CONSTRUCTIBLE:
-      pp_cxx_ws_string (pp, "__is_nothrow_constructible");
-      break;
-    case CPTK_IS_CONVERTIBLE:
-      pp_cxx_ws_string (pp, "__is_convertible");
-      break;
-    case CPTK_IS_NOTHROW_CONVERTIBLE:
-      pp_cxx_ws_string (pp, "__is_nothrow_convertible");
-      break;
     case CPTK_REF_CONSTRUCTS_FROM_TEMPORARY:
       pp_cxx_ws_string (pp, "__reference_constructs_from_temporary");
       break;
@@ -2728,15 +2710,12 @@ pp_cxx_trait (cxx_pretty_printer *pp, tree t)
     case CPTK_UNDERLYING_TYPE:
       pp_cxx_ws_string (pp, "__underlying_type");
       break;
-    case CPTK_REMOVE_CV:
-      pp_cxx_ws_string (pp, "__remove_cv");
+#define DEFTRAIT(TCC, CODE, NAME, ARITY) \
+    case CPTK_##CODE:			 \
+      pp_cxx_ws_string (pp, NAME);	 \
       break;
-    case CPTK_REMOVE_REFERENCE:
-      pp_cxx_ws_string (pp, "__remove_reference");
-      break;
-    case CPTK_REMOVE_CVREF:
-      pp_cxx_ws_string (pp, "__remove_cvref");
-      break;
+#include "cp/cp-trait.def"
+#undef DEFTRAIT
     default:
       gcc_unreachable ();
     }

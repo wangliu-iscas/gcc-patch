@@ -1147,9 +1147,10 @@ cp_keyword_starts_decl_specifier_p (enum rid keyword)
       /* C++11 extensions.  */
     case RID_DECLTYPE:
     case RID_UNDERLYING_TYPE:
-    case RID_REMOVE_CV:
-    case RID_REMOVE_REFERENCE:
-    case RID_REMOVE_CVREF:
+#define DEFTRAIT_TYPE(CODE, NAME, ARITY) \
+    case RID_##CODE:
+#include "cp/cp-trait.def"
+#undef DEFTRAIT_TYPE
     case RID_CONSTEXPR:
       /* C++20 extensions.  */
     case RID_CONSTINIT:
@@ -5923,14 +5924,12 @@ cp_parser_primary_expression (cp_parser *parser,
 	case RID_IS_TRIVIALLY_CONSTRUCTIBLE:
 	case RID_IS_TRIVIALLY_COPYABLE:
 	case RID_IS_UNION:
-	case RID_IS_ASSIGNABLE:
-	case RID_IS_CONSTRUCTIBLE:
-	case RID_IS_NOTHROW_ASSIGNABLE:
-	case RID_IS_NOTHROW_CONSTRUCTIBLE:
-	case RID_IS_CONVERTIBLE:
-	case RID_IS_NOTHROW_CONVERTIBLE:
 	case RID_REF_CONSTRUCTS_FROM_TEMPORARY:
 	case RID_REF_CONVERTS_FROM_TEMPORARY:
+#define DEFTRAIT_EXPR(CODE, NAME, ARITY) \
+	case RID_##CODE:
+#include "cp/cp-trait.def"
+#undef DEFTRAIT_EXPR
 	  return cp_parser_trait (parser, token->keyword);
 
 	// C++ concepts
@@ -10998,30 +10997,6 @@ cp_parser_trait (cp_parser* parser, enum rid keyword)
     case RID_DIRECT_BASES:
       kind = CPTK_DIRECT_BASES;
       break;
-    case RID_IS_ASSIGNABLE:
-      kind = CPTK_IS_ASSIGNABLE;
-      binary = true;
-      break;
-    case RID_IS_CONSTRUCTIBLE:
-      kind = CPTK_IS_CONSTRUCTIBLE;
-      variadic = true;
-      break;
-    case RID_IS_NOTHROW_ASSIGNABLE:
-      kind = CPTK_IS_NOTHROW_ASSIGNABLE;
-      binary = true;
-      break;
-    case RID_IS_NOTHROW_CONSTRUCTIBLE:
-      kind = CPTK_IS_NOTHROW_CONSTRUCTIBLE;
-      variadic = true;
-      break;
-    case RID_IS_CONVERTIBLE:
-      kind = CPTK_IS_CONVERTIBLE;
-      binary = true;
-      break;
-    case RID_IS_NOTHROW_CONVERTIBLE:
-      kind = CPTK_IS_NOTHROW_CONVERTIBLE;
-      binary = true;
-      break;
     case RID_REF_CONSTRUCTS_FROM_TEMPORARY:
       kind = CPTK_REF_CONSTRUCTS_FROM_TEMPORARY;
       binary = true;
@@ -11030,18 +11005,15 @@ cp_parser_trait (cp_parser* parser, enum rid keyword)
       kind = CPTK_REF_CONVERTS_FROM_TEMPORARY;
       binary = true;
       break;
-    case RID_REMOVE_CV:
-      kind = CPTK_REMOVE_CV;
-      type = true;
+#define DEFTRAIT(TCC, CODE, NAME, ARITY) \
+    case RID_##CODE:			 \
+      type = (TCC == tcc_type);		 \
+      kind = CPTK_##CODE;		 \
+      binary = (ARITY == 2);		 \
+      variadic = (ARITY == -1);		 \
       break;
-    case RID_REMOVE_REFERENCE:
-      kind = CPTK_REMOVE_REFERENCE;
-      type = true;
-      break;
-    case RID_REMOVE_CVREF:
-      kind = CPTK_REMOVE_CVREF;
-      type = true;
-      break;
+#include "cp/cp-trait.def"
+#undef DEFTRAIT
     default:
       gcc_unreachable ();
     }
@@ -19882,9 +19854,10 @@ cp_parser_simple_type_specifier (cp_parser* parser,
       return type;
 
     case RID_UNDERLYING_TYPE:
-    case RID_REMOVE_CV:
-    case RID_REMOVE_REFERENCE:
-    case RID_REMOVE_CVREF:
+#define DEFTRAIT_TYPE(CODE, NAME, ARITY) \
+    case RID_##CODE:
+#include "cp/cp-trait.def"
+#undef DEFTRAIT_TYPE
       type = cp_parser_trait (parser, token->keyword);
       if (decl_specs)
 	cp_parser_set_decl_spec_type (decl_specs, type,

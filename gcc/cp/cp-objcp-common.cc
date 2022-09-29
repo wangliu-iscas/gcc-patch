@@ -458,18 +458,13 @@ names_builtin_p (const char *name)
     case RID_IS_TRIVIALLY_CONSTRUCTIBLE:
     case RID_IS_TRIVIALLY_COPYABLE:
     case RID_IS_UNION:
-    case RID_IS_ASSIGNABLE:
-    case RID_IS_CONSTRUCTIBLE:
-    case RID_IS_NOTHROW_ASSIGNABLE:
-    case RID_IS_NOTHROW_CONSTRUCTIBLE:
     case RID_UNDERLYING_TYPE:
-    case RID_IS_CONVERTIBLE:
-    case RID_IS_NOTHROW_CONVERTIBLE:
     case RID_REF_CONSTRUCTS_FROM_TEMPORARY:
     case RID_REF_CONVERTS_FROM_TEMPORARY:
-    case RID_REMOVE_CV:
-    case RID_REMOVE_REFERENCE:
-    case RID_REMOVE_CVREF:
+#define DEFTRAIT(TCC, CODE, NAME, ARITY) \
+    case RID_##CODE:
+#include "cp/cp-trait.def"
+#undef DEFTRAIT
       return true;
     default:
       break;
