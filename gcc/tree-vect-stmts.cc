@@ -11404,6 +11404,12 @@ vect_transform_stmt (vec_info *vinfo,
       gcc_assert (done);
       break;
 
+    case dep_phi_info_type:
+      done = vectorizable_dep_phi (as_a <loop_vec_info> (vinfo),
+				  stmt_info, &vec_stmt, slp_node);
+      gcc_assert (done);
+      break;
+
     case phi_info_type:
       done = vectorizable_phi (vinfo, stmt_info, &vec_stmt, slp_node, NULL);
       gcc_assert (done);
@@ -11804,6 +11810,9 @@ vect_is_simple_use (tree operand, vec_info *vinfo, enum vect_def_type *dt,
 	case vect_nested_cycle:
 	  dump_printf (MSG_NOTE, "nested cycle\n");
 	  break;
+	case vect_first_order_recurrence:
+	  dump_printf (MSG_NOTE, "first order recurrence\n");
+	  break;
 	case vect_unknown_def_type:
 	  dump_printf (MSG_NOTE, "unknown\n");
 	  break;
@@ -11852,7 +11861,8 @@ vect_is_simple_use (tree operand, vec_info *vinfo, enum vect_def_type *dt,
       || *dt == vect_induction_def
       || *dt == vect_reduction_def
       || *dt == vect_double_reduction_def
-      || *dt == vect_nested_cycle)
+      || *dt == vect_nested_cycle
+			|| *dt == vect_first_order_recurrence)
     {
       *vectype = STMT_VINFO_VECTYPE (def_stmt_info);
       gcc_assert (*vectype != NULL_TREE);

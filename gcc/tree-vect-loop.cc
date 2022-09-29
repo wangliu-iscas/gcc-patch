@@ -529,6 +529,57 @@ vect_inner_phi_in_double_reduction_p (loop_vec_info loop_vinfo, gphi *phi)
   return false;
 }
 
+/* Returns true if Phi is a first-order recurrence. A first-order
+   recurrence is a non-reduction recurrence relation in which the value of
+   the recurrence in the current loop iteration equals a value defined in
+   the previous iteration.  */
+
+static bool
+vect_phi_first_order_recurrence_p (loop_vec_info loop_vinfo, class loop *loop,
+				   gphi *phi)
+{
+  /* Ensure the phi node is in the loop header and has two incoming values.  */
+  if (gimple_bb (phi) != loop->header || gimple_phi_num_args (phi) != 2)
+    return false;
+
+  /* Ensure the loop has a preheader and a single latch block. The loop
+     vectorizer will need the latch to set up the next iteration of the loop. */
+  edge preheader = loop_preheader_edge (loop);
+  edge latch = loop_latch_edge (loop);
+  if (!preheader || !latch)
+    return false;
+
+  /* Ensure the phi node's incoming blocks are the loop preheader and latch.  */
+  if (!PHI_ARG_DEF_FROM_EDGE (phi, preheader)
+      || !PHI_ARG_DEF_FROM_EDGE (phi, latch))
+    return false;
+
+  /* Get the previous value. The previous value comes from the latch edge while
+     the initial value comes form the preheader edge.  */
+  gimple *previous = SSA_NAME_DEF_STMT (PHI_ARG_DEF_FROM_EDGE (phi, latch));
+  if (!previous)
+    return false;
+
+  /* Ensure every use_stmt of the phi node is dominated by the previous value.
+     The dominance requirement ensures the loop vectorizer will not need to
+     vectorize the initial value prior to the first iteration of the loop.  */
+  gimple *use_stmt;
+  imm_use_iterator imm_iter;
+  FOR_EACH_IMM_USE_STMT (use_stmt, imm_iter, gimple_phi_result (phi))
+    if (use_stmt)
+      if (!dominated_by_p (CDI_DOMINATORS, gimple_bb (use_stmt),
+			   gimple_bb (previous)))
+	return false;
+
+  /* First-order recurrence autovectorization needs shuffle vector.  */
+  tree scalar_type = TREE_TYPE (PHI_RESULT (phi));
+  tree vectype = get_vectype_for_scalar_type (loop_vinfo, scalar_type);
+  if (!can_vec_perm_var_p (TYPE_MODE (vectype)))
+    return false;
+
+  return true;
+}
+
 /* Function vect_analyze_scalar_cycles_1.
 
    Examine the cross iteration def-use cycles of scalar variables
@@ -666,6 +717,8 @@ vect_analyze_scalar_cycles_1 (loop_vec_info loop_vinfo, class loop *loop,
                 }
             }
         }
+      else if (vect_phi_first_order_recurrence_p (loop_vinfo, loop, phi))
+	STMT_VINFO_DEF_TYPE (stmt_vinfo) = vect_first_order_recurrence;
       else
         if (dump_enabled_p ())
           dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
@@ -1808,9 +1861,13 @@ vect_analyze_loop_operations (loop_vec_info loop_vinfo)
 
           gcc_assert (stmt_info);
 
+          if (STMT_VINFO_DEF_TYPE (stmt_info) == vect_first_order_recurrence)
+	    ok = vectorizable_dep_phi (loop_vinfo, stmt_info, NULL, NULL);
+
           if ((STMT_VINFO_RELEVANT (stmt_info) == vect_used_in_scope
                || STMT_VINFO_LIVE_P (stmt_info))
-              && STMT_VINFO_DEF_TYPE (stmt_info) != vect_induction_def)
+              && STMT_VINFO_DEF_TYPE (stmt_info) != vect_induction_def
+              && STMT_VINFO_DEF_TYPE (stmt_info) != vect_first_order_recurrence)
 	    /* A scalar-dependence cycle that we don't support.  */
 	    return opt_result::failure_at (phi,
 					   "not vectorized:"
@@ -8267,6 +8324,120 @@ vectorizable_phi (vec_info *,
   return true;
 }
 
+/* Vectorizes Dep PHIs.  */
+
+bool
+vectorizable_dep_phi (loop_vec_info loop_vinfo, stmt_vec_info stmt_info,
+		      gimple **vec_stmt, slp_tree slp_node)
+{
+  if (!loop_vinfo || !is_a<gphi *> (stmt_info->stmt))
+    return false;
+
+  gphi *phi = as_a<gphi *> (stmt_info->stmt);
+
+  /* So far we only support first-order recurrence auto-vectorization.  */
+  if (STMT_VINFO_DEF_TYPE (stmt_info) != vect_first_order_recurrence)
+    return false;
+
+  if (!vec_stmt) /* transformation not required.  */
+    {
+      /* So far we don't support first-order recurrence for SLP
+       * auto-vectorization.   */
+      if (slp_node)
+	{
+	  if (dump_enabled_p ())
+	    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+			     "do not support first-order recurrence"
+			     "autovectorization for SLP node\n");
+	  return false;
+	}
+      STMT_VINFO_TYPE (stmt_info) = dep_phi_info_type;
+      return true;
+    }
+
+  /* This is the second phase of vectorizing first-order rececurrences. An
+  overview of the transformation is described below. Suppose we have the
+  following loop.
+
+    int32_t t = 0;
+    for (int i = 0; i < n; ++i)
+      {
+	b[i] = a[i] - t;
+	t = a[i];
+      }
+
+  There is a first-order recurrence on "a". For this loop, the shorthand
+  scalar IR looks like:
+
+    scalar.preheader:
+      init = a[-1]
+      br loop.body
+
+    scalar.body:
+      i = PHI <0(scalar.preheader), i+1(scalar.body)>
+      _2 = PHI <(init(scalar.preheader), <_1(scalar.body)>
+      _1 = a[i]
+      b[i] = _1 - _2
+      br cond, scalar.body, ...
+
+  In this example, _2 is a recurrence because it's value depends on the
+  previous iteration. In the first phase of vectorization, we created a
+  temporary value for _2. We now complete the vectorization and produce the
+  shorthand vector IR shown below (VF = 4).
+
+    vector.preheader:
+      vect_init = vect_cst(..., ..., ..., a[-1])
+      br vector.body
+
+    vector.body
+      i = PHI <0(vector.preheader), i+4(vector.body)>
+      vect_1 = PHI <vect_init(vector.preheader), v2(vector.body)>
+      vect_2 = a[i, i+1, i+2, i+3];
+      vect_3 = vector(vect_1(3), vect_2(0, 1, 2))
+      b[i, i+1, i+2, i+3] = vect_2 - vect_3
+      br cond, vector.body, middle.block
+
+    middle.block:
+      x = vect_2(3)
+      br scalar.preheader
+
+    scalar.ph:
+      s_init = PHI <x(middle.block), a[-1], otherwise>
+      br scalar.body
+
+  After execution completes the vector loop, we extract the next value of
+  the recurrence (x) to use as the initial value in the scalar loop.  */
+
+  class loop *loop = LOOP_VINFO_LOOP (loop_vinfo);
+  tree vectype = STMT_VINFO_VECTYPE (stmt_info);
+  tree scalar_dest = gimple_phi_result (stmt_info->stmt);
+  basic_block bb = gimple_bb (stmt_info->stmt);
+  tree vec_dest = vect_create_destination_var (scalar_dest, vectype);
+  auto_vec<tree> vec_oprnds;
+  tree preheader = PHI_ARG_DEF_FROM_EDGE (phi, loop_preheader_edge (loop));
+  tree latch = PHI_ARG_DEF_FROM_EDGE (phi, loop_latch_edge (loop));
+  gimple_seq stmts = NULL;
+
+  tree vec_init = build_vector_from_val (vectype, preheader);
+  vec_init = vect_init_vector (loop_vinfo, stmt_info,
+			       vec_init, vectype, NULL);
+  vect_get_vec_defs (loop_vinfo, stmt_info, slp_node,
+		     !slp_node ? vect_get_num_copies (loop_vinfo, vectype) : 1,
+		     gimple_phi_arg_def (stmt_info->stmt, 0), &vec_oprnds);
+  /* Create the vectorized first-order PHI node.  */
+  gphi *new_phi = create_phi_node (vec_dest, bb);
+  add_phi_arg (new_phi, vec_oprnds[0], loop_latch_edge (loop),
+	       UNKNOWN_LOCATION);
+  add_phi_arg (new_phi, vec_init, loop_preheader_edge (loop), UNKNOWN_LOCATION);
+  if (slp_node)
+    SLP_TREE_VEC_STMTS (slp_node).quick_push (new_phi);
+  else
+    STMT_VINFO_VEC_STMTS (stmt_info).safe_push (new_phi);
+  if (!slp_node)
+    *vec_stmt = STMT_VINFO_VEC_STMTS (stmt_info)[0];
+  return true;
+}
+
 /* Return true if VECTYPE represents a vector that requires lowering
    by the vector lowering pass.  */
 
@@ -10476,6 +10647,26 @@ update_epilogue_loop_vinfo (class loop *epilogue, tree advance)
   epilogue_vinfo->shared->save_datarefs ();
 }
 
+/* Return true if the stmt is the first statement that uses the result
+   of a first-order recurrence phi node.  */
+
+static gphi *
+vect_use_first_order_phi_result_p (auto_vec<gphi *> &first_order_phi_vec,
+				   gimple *stmt)
+{
+  for (unsigned int i = 0; i < first_order_phi_vec.length (); ++i)
+    {
+      imm_use_iterator imm;
+      gphi *phi = first_order_phi_vec[i];
+      tree phi_result = PHI_RESULT (phi);
+      gimple *first_use = first_imm_use_stmt (&imm, phi_result);
+      if (first_use && first_use == stmt)
+	return phi;
+    }
+
+  return NULL;
+}
+
 /* Function vect_transform_loop.
 
    The analysis phase has determined that the loop is vectorizable.
@@ -10624,6 +10815,31 @@ vect_transform_loop (loop_vec_info loop_vinfo, gimple *loop_vectorized_call)
       basic_block bb = bbs[i];
       stmt_vec_info stmt_info;
 
+      /* It's used to save the first-order recurrence phi node.
+         Consider the following case:
+         # t_19 = PHI <_4(6), 0(5)>
+         ...
+         _4 = *_3;
+         ...
+         _6 = _4 - t_19;
+         
+         The vectorization sequence should be:
+         1. Vectorize _4 = *_3;
+         2. Vectorize # t_19 = PHI <_4(6), 0(5)>
+         3, Vectorize _6 = _4 - t_19;
+         
+         Flow:
+         1. So we save the first-order recurrence PHI in first_order_phi_vec
+	    and skip vectorizing it tentatively when iterating phi statement 
+	    (save t_19 = PHI <_4(6), 0(5)>).
+         2. Vectorize all statements when iterating all statements
+            until we reach the statement who is using the result of
+            first-order recurrence PHI (vectorize _4 = *_3;).
+         3. Stop iterating and return to vectorize the PHI saved
+	    in first_order_phi_vec (# t_19 = PHI <_4(6), 0(5)>).
+         4. Conintue iterating and vectorize the residual statements.  */
+      auto_vec<gphi *> first_order_phi_vec;
+
       for (gphi_iterator si = gsi_start_phis (bb); !gsi_end_p (si);
 	   gsi_next (&si))
 	{
@@ -10677,9 +10893,16 @@ vect_transform_loop (loop_vec_info loop_vinfo, gimple *loop_vectorized_call)
 	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_reduction_def
 	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_double_reduction_def
 	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_nested_cycle
-	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_internal_def)
+	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_internal_def
+	       || STMT_VINFO_DEF_TYPE (stmt_info) == vect_first_order_recurrence)
 	      && ! PURE_SLP_STMT (stmt_info))
 	    maybe_set_vectorized_backedge_value (loop_vinfo, stmt_info);
+
+	  if (STMT_VINFO_DEF_TYPE (stmt_info) == vect_first_order_recurrence)
+	    {
+	      first_order_phi_vec.safe_push (phi);
+	      continue;
+	    }
 	}
 
       for (gimple_stmt_iterator si = gsi_start_bb (bb);
@@ -10697,6 +10920,18 @@ vect_transform_loop (loop_vec_info loop_vinfo, gimple *loop_vectorized_call)
 	    {
 	      /* Ignore vector stmts created in the outer loop.  */
 	      stmt_info = loop_vinfo->lookup_stmt (stmt);
+
+	      gphi *first_order_phi
+		= vect_use_first_order_phi_result_p (first_order_phi_vec, stmt);
+	      if (first_order_phi)
+		{
+		  stmt_vec_info first_order_stmt_info
+		    = loop_vinfo->lookup_stmt (first_order_phi);
+		  gimple_stmt_iterator first_order_si
+		    = gsi_for_stmt (first_order_phi);
+		  vect_transform_loop_stmt (loop_vinfo, first_order_stmt_info,
+					    &first_order_si, NULL);
+		}
 
 	      /* vector stmts created in the outer-loop during vectorization of
 		 stmts in an inner-loop may not have a stmt_info, and do not
