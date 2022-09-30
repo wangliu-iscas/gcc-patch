@@ -1728,7 +1728,9 @@ expand_one_await_expression (tree *stmt, tree *await_expr, void *d)
     }
   else
     {
-      r = build1_loc (loc, CONVERT_EXPR, void_coro_handle_type, suspend);
+      gcc_checking_assert (same_type_ignoring_top_level_qualifiers_p
+			   (void_coro_handle_type, susp_type));
+      r = suspend;
       r = build2_loc (loc, INIT_EXPR, void_coro_handle_type, data->conthand, r);
       r = build1 (CONVERT_EXPR, void_type_node, r);
       append_to_statement_list (r, &body_list);
