@@ -687,6 +687,16 @@ extern int flag_isoc2x;
 
 extern int flag_hosted;
 
+/* Nonzero means that we want to give main its special meaning */
+
+extern int flag_builtin_main;
+
+/* Returns false if both flag_hosted and flag_builtin_main are zero, true
+   otherwise. */
+inline bool builtin_main_p() {
+  return flag_hosted || flag_builtin_main;
+}
+
 /* ObjC language option variables.  */
 
 

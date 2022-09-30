@@ -2537,8 +2537,10 @@ this switch only affects the @code{asm} and @code{typeof} keywords,
 since @code{inline} is a standard keyword in ISO C99.
 
 @item -fno-builtin
+@itemx -fno-builtin-main
 @itemx -fno-builtin-@var{function}
 @opindex fno-builtin
+@opindex fno-builtin-main
 @opindex fbuiltin
 @cindex built-in functions
 Don't recognize built-in functions that do not begin with
@@ -2577,6 +2579,11 @@ built-in functions selectively when using @option{-fno-builtin} or
 #define strcpy(d, s)    __builtin_strcpy ((d), (s))
 @end smallexample
 
+The special form @option{-fno-builtin-main} permits disabling special
+handling of the @code{main} function, such as the implicit zero
+return.  This option has no effect in hosted mode (as hosted takes
+precedence over it) and is not implied by @option{-fno-builtin}.
+
 @item -fcond-mismatch
 @opindex fcond-mismatch
 Allow conditional expressions with mismatched types in the second and
@@ -2585,13 +2592,16 @@ is not supported for C++.
 
 @item -ffreestanding
 @opindex ffreestanding
+@opindex fno-builtin-main
 @cindex hosted environment
 
 Assert that compilation targets a freestanding environment.  This
-implies @option{-fno-builtin}.  A freestanding environment
-is one in which the standard library may not exist, and program startup may
-not necessarily be at @code{main}.  The most obvious example is an OS kernel.
-This is equivalent to @option{-fno-hosted}.
+implies @option{-fno-builtin}.  A freestanding environment is one in
+which the standard library may not exist, and program startup may not
+necessarily be at @code{main}.  The most obvious example is an OS
+kernel.  Note that this option does not imply
+@option{-fno-builtin-main}.  @option{-ffreestanding} is equivalent to
+@option{-fno-hosted}.
 
 @xref{Standards,,Language Standards Supported by GCC}, for details of
 freestanding and hosted environments.
@@ -5828,7 +5838,7 @@ Options} and @ref{Objective-C and Objective-C++ Dialect Options}.
 -Wimplicit-function-declaration @r{(C and Objective-C only)} @gol
 -Winit-self @r{(only for C++)} @gol
 -Wlogical-not-parentheses @gol
--Wmain @r{(only for C/ObjC and unless} @option{-ffreestanding}@r{)}  @gol
+-Wmain @r{(only for C/ObjC and unless} @option{-fno-builtin-main}@r{)}  @gol
 -Wmaybe-uninitialized @gol
 -Wmemset-elt-size @gol
 -Wmemset-transposed-args @gol
