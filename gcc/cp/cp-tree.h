@@ -771,11 +771,13 @@ typedef struct ptrmem_cst * ptrmem_cst_t;
 
 /* Returns nonzero iff NODE is a declaration for the global function
    `main'.  */
-#define DECL_MAIN_P(NODE)				\
-   (DECL_EXTERN_C_FUNCTION_P (NODE)			\
-    && DECL_NAME (NODE) != NULL_TREE			\
-    && MAIN_NAME_P (DECL_NAME (NODE))			\
-    && flag_hosted)
+#define DECL_MAIN_P(NODE)					\
+   (DECL_EXTERN_C_FUNCTION_P (NODE)				\
+    && DECL_NAME (NODE) != NULL_TREE				\
+    && MAIN_NAME_P (DECL_NAME (NODE))				\
+    && (flag_hosted || (flag_builtin_main			\
+	&& TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (NODE)))	\
+	    == integer_type_node)))
 
 /* Lookup walker marking.  */
 #define LOOKUP_SEEN_P(NODE) TREE_VISITED (NODE)

@@ -232,6 +232,10 @@ int flag_isoc2x;
 
 int flag_hosted = 1;
 
+/* Nonzero means that we want to give main its special meaning */
+
+int flag_builtin_main = 1;
+
 
 /* ObjC language option variables.  */
 
@@ -4878,6 +4882,8 @@ disable_builtin_function (const char *name)
 {
   if (startswith (name, "__builtin_"))
     error ("cannot disable built-in function %qs", name);
+  else if (strcmp("main", name) == 0)
+    flag_builtin_main = 0;
   else
     {
       disabled_builtin *new_disabled_builtin = XNEW (disabled_builtin);
