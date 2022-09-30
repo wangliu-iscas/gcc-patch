@@ -1503,6 +1503,41 @@ vect_get_vec_defs_for_operand (vec_info *vinfo, stmt_vec_info stmt_vinfo,
       while (ncopies--)
 	vec_oprnds->quick_push (vop);
     }
+  else if (dt == vect_first_order_recurrence)
+    {
+      def_stmt_info = vect_stmt_to_vectorize (def_stmt_info);
+      gcc_assert (STMT_VINFO_VEC_STMTS (def_stmt_info).length () == ncopies);
+      tree vector_type;
+
+      if (vectype)
+	vector_type = vectype;
+      else
+	vector_type = get_vectype_for_scalar_type (loop_vinfo, TREE_TYPE (op));
+
+      /* Insert shufflevector to for first-order recurrence autovectorization.
+	 result = VEC_PERM <vec_recur, vect_1, index[nunits-1, nunits, ...].  */
+      machine_mode mode = TYPE_MODE (vector_type);
+      poly_int64 nunits = GET_MODE_NUNITS (mode);
+      vec_perm_builder sel (nunits, 1, 3);
+      for (int i = 0; i < 3; ++i)
+	sel.quick_push (nunits - 1 + i);
+      vec_perm_indices indices (sel, 1, nunits * 2);
+      tree perm = vec_perm_indices_to_tree (vector_type, indices);
+      class loop *loop = LOOP_VINFO_LOOP (loop_vinfo);
+
+      for (unsigned i = 0; i < ncopies; ++i)
+	{
+	  gphi *phi = as_a<gphi *> (STMT_VINFO_VEC_STMTS (def_stmt_info)[i]);
+	  tree latch = PHI_ARG_DEF_FROM_EDGE (phi, loop_latch_edge (loop));
+	  tree recur = gimple_phi_result (phi);
+	  gassign *assign
+	    = gimple_build_assign (recur, VEC_PERM_EXPR, recur, latch, perm);
+	  gimple_assign_set_lhs (assign, recur);
+	  gimple_stmt_iterator gsi = gsi_for_stmt (stmt_vinfo->stmt);
+	  vect_finish_stmt_generation (vinfo, stmt_vinfo, assign, &gsi);
+	  vec_oprnds->quick_push (recur);
+	}
+    }
   else
     {
       def_stmt_info = vect_stmt_to_vectorize (def_stmt_info);
@@ -11404,6 +11439,12 @@ vect_transform_stmt (vec_info *vinfo,
       gcc_assert (done);
       break;
 
+    case dep_phi_info_type:
+      done = vectorizable_dep_phi (as_a <loop_vec_info> (vinfo),
+				  stmt_info, &vec_stmt, slp_node);
+      gcc_assert (done);
+      break;
+
     case phi_info_type:
       done = vectorizable_phi (vinfo, stmt_info, &vec_stmt, slp_node, NULL);
       gcc_assert (done);
@@ -11804,6 +11845,9 @@ vect_is_simple_use (tree operand, vec_info *vinfo, enum vect_def_type *dt,
 	case vect_nested_cycle:
 	  dump_printf (MSG_NOTE, "nested cycle\n");
 	  break;
+	case vect_first_order_recurrence:
+	  dump_printf (MSG_NOTE, "first order recurrence\n");
+	  break;
 	case vect_unknown_def_type:
 	  dump_printf (MSG_NOTE, "unknown\n");
 	  break;
@@ -11852,7 +11896,8 @@ vect_is_simple_use (tree operand, vec_info *vinfo, enum vect_def_type *dt,
       || *dt == vect_induction_def
       || *dt == vect_reduction_def
       || *dt == vect_double_reduction_def
-      || *dt == vect_nested_cycle)
+      || *dt == vect_nested_cycle
+			|| *dt == vect_first_order_recurrence)
     {
       *vectype = STMT_VINFO_VECTYPE (def_stmt_info);
       gcc_assert (*vectype != NULL_TREE);
