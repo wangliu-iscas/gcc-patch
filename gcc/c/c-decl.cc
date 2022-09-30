@@ -7695,7 +7695,7 @@ grokdeclarator (const struct c_declarator *declarator,
 
 	/* Record presence of `inline' and `_Noreturn', if it is
 	   reasonable.  */
-	if (flag_hosted && MAIN_NAME_P (declarator->u.id.id))
+	if (builtin_main_p() && MAIN_NAME_P (declarator->u.id.id))
 	  {
 	    if (declspecs->inline_p)
 	      pedwarn (loc, 0, "cannot inline function %<main%>");
@@ -10314,7 +10314,7 @@ finish_function (location_t end_loc)
   if (DECL_RESULT (fndecl) && DECL_RESULT (fndecl) != error_mark_node)
     DECL_CONTEXT (DECL_RESULT (fndecl)) = fndecl;
 
-  if (MAIN_NAME_P (DECL_NAME (fndecl)) && flag_hosted
+  if (MAIN_NAME_P (DECL_NAME (fndecl)) && builtin_main_p()
       && TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (fndecl)))
       == integer_type_node && flag_isoc99)
     {

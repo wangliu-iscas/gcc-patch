@@ -1,6 +1,6 @@
 /* Test C11 _Noreturn.  Test _Noreturn on main, freestanding.  */
 /* { dg-do compile } */
-/* { dg-options "-std=c11 -pedantic-errors -ffreestanding" } */
+/* { dg-options "-std=c11 -pedantic-errors -ffreestanding -fno-builtin-main" } */
 
 _Noreturn void exit (int);
 
