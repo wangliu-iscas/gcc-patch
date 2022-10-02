@@ -2749,9 +2749,9 @@ have support for @option{-pthread}. @option{-fopenmp} implies
 @opindex fopenmp-simd
 @cindex OpenMP SIMD
 @cindex SIMD
-Enable handling of OpenMP's SIMD directives with @code{#pragma omp}
-in C/C++ and @code{!$omp} in Fortran. Other OpenMP directives
-are ignored.
+Enable handling of OpenMP's SIMD directives and OPENMP's @code{assume} directive
+with @code{#pragma omp} in C/C++ and @code{!$omp} in Fortran.  Other OpenMP
+directives are ignored.
 
 @item -fpermitted-flt-eval-methods=@var{style}
 @opindex fpermitted-flt-eval-methods
