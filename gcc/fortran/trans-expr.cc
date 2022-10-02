@@ -43,6 +43,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "gimplify.h"
 #include "tm.h"		/* For CHAR_TYPE_SIZE.  */
 
+#include "debug.h"
 
 /* Calculate the number of characters in a string.  */
 
@@ -5987,7 +5988,6 @@ post_call:
     gfc_add_block_to_block (&parmse->post, &block);
 }
 
-
 /* Generate code for a procedure call.  Note can return se->post != NULL.
    If se->direct_byref is set then se->expr contains the return parameter.
    Return nonzero, if the call has alternate specifiers.
@@ -6105,6 +6105,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
     {
       bool finalized = false;
       tree derived_array = NULL_TREE;
+      tree clobber_array = NULL_TREE;
 
       e = arg->expr;
       fsym = formal ? formal->sym : NULL;
@@ -6902,10 +6903,23 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 					     fsym->attr.pointer);
 		}
 	      else
-		/* This is where we introduce a temporary to store the
-		   result of a non-lvalue array expression.  */
-		gfc_conv_array_parameter (&parmse, e, nodesc_arg, fsym,
-					  sym->name, NULL);
+		{
+		  /* This is where we introduce a temporary to store the
+		     result of a non-lvalue array expression.  */
+		  gfc_conv_array_parameter (&parmse, e, nodesc_arg, fsym,
+					    sym->name, NULL);
+		  if (fsym && fsym->attr.intent == INTENT_OUT
+		      && gfc_full_array_ref_p (e->ref, NULL))
+		    {
+		      gfc_symbol *sym = e->symtree->n.sym;
+		      if (!sym->attr.allocatable && !sym->attr.pointer
+			  && !POINTER_TYPE_P (TREE_TYPE (sym->backend_decl)))
+			clobber_array
+			  = gfc_build_array_ref (e->symtree->n.sym->backend_decl,
+						 build_int_cst (size_type_node, 0),
+						 NULL_TREE, true, NULL_TREE);
+		    }
+		}
 
 	      /* If an ALLOCATABLE dummy argument has INTENT(OUT) and is
 		 allocated on entry, it must be deallocated.
@@ -6957,6 +6971,13 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 				     gfc_conv_expr_present (e->symtree->n.sym),
 				       tmp, build_empty_stmt (input_location));
 		  gfc_add_expr_to_block (&se->pre, tmp);
+		}
+
+	      if (clobber_array != NULL_TREE)
+		{
+		  tree clobber;
+		  clobber = build_clobber (TREE_TYPE(clobber_array));
+		  gfc_add_modify (&clobbers, clobber_array, clobber);
 		}
 	    }
 	}
