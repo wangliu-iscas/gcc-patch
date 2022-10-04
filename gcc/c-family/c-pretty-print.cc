@@ -850,32 +850,8 @@ c_pretty_printer::declaration (tree t)
   pp_c_init_declarator (this, t);
 }
 
-/* Pretty-print ATTRIBUTES using GNU C extension syntax.  */
-
-void
-pp_c_attributes (c_pretty_printer *pp, tree attributes)
-{
-  if (attributes == NULL_TREE)
-    return;
-
-  pp_c_ws_string (pp, "__attribute__");
-  pp_c_left_paren (pp);
-  pp_c_left_paren (pp);
-  for (; attributes != NULL_TREE; attributes = TREE_CHAIN (attributes))
-    {
-      pp_tree_identifier (pp, TREE_PURPOSE (attributes));
-      if (TREE_VALUE (attributes))
-	pp_c_call_argument_list (pp, TREE_VALUE (attributes));
-
-      if (TREE_CHAIN (attributes))
-	pp_separate_with (pp, ',');
-    }
-  pp_c_right_paren (pp);
-  pp_c_right_paren (pp);
-}
-
 /* Pretty-print ATTRIBUTES using GNU C extension syntax for attributes
-   marked to be displayed on disgnostic.  */
+   marked to be displayed on diagnostic.  */
 
 void
 pp_c_attributes_display (c_pretty_printer *pp, tree a)
@@ -888,7 +864,7 @@ pp_c_attributes_display (c_pretty_printer *pp, tree a)
   for (; a != NULL_TREE; a = TREE_CHAIN (a))
     {
       const struct attribute_spec *as;
-      as = lookup_attribute_spec (TREE_PURPOSE (a));
+      as = lookup_attribute_spec (get_attribute_name (a));
       if (!as || as->affects_type_identity == false)
         continue;
       if (c_dialect_cxx ()
@@ -906,7 +882,7 @@ pp_c_attributes_display (c_pretty_printer *pp, tree a)
        {
          pp_separate_with (pp, ',');
        }
-      pp_tree_identifier (pp, TREE_PURPOSE (a));
+      pp_tree_identifier (pp, get_attribute_name (a));
       if (TREE_VALUE (a))
        pp_c_call_argument_list (pp, TREE_VALUE (a));
     }
