@@ -56,9 +56,6 @@
 #   cpu_opt_ext_random     path name of random.h containing CPU-specific
 #                          optimizations for extensions
 #
-#   error_constants_dir    location of error_constants.h
-#                          defaults to os/generic.
-#
 # It possibly modifies the following variables:
 #
 #   OPT_LDFLAGS            extra flags to pass when linking the library, of
@@ -93,7 +90,6 @@ cpu_defines_dir="cpu/generic"
 try_cpu=generic
 abi_baseline_subdir_switch=--print-multi-directory
 abi_tweaks_dir="cpu/generic"
-error_constants_dir="os/generic"
 tmake_file=
 
 # HOST-SPECIFIC OVERRIDES
@@ -247,7 +243,6 @@ case "${host_os}" in
     ;;
   *djgpp*)      # leading * picks up "msdosdjgpp"
     os_include_dir="os/djgpp"
-    error_constants_dir="os/djgpp"
     ;;
   dragonfly*)
     os_include_dir="os/bsd/dragonfly"
@@ -274,11 +269,9 @@ case "${host_os}" in
     case "$host" in
       *-w64-*)
         os_include_dir="os/mingw32-w64"
-        error_constants_dir="os/mingw32-w64"
         ;;
       *)
         os_include_dir="os/mingw32"
-        error_constants_dir="os/mingw32"
         ;;
     esac
     OPT_LDFLAGS="${OPT_LDFLAGS} \$(lt_host_flags)"

@@ -1033,7 +1033,6 @@ host_headers = \
 	${glibcxx_srcdir}/$(ATOMIC_WORD_SRCDIR)/atomic_word.h \
 	${glibcxx_srcdir}/$(ABI_TWEAKS_SRCDIR)/cxxabi_tweaks.h \
 	${glibcxx_srcdir}/$(CPU_DEFINES_SRCDIR)/cpu_defines.h \
-	${glibcxx_srcdir}/$(ERROR_CONSTANTS_SRCDIR)/error_constants.h \
 	${glibcxx_srcdir}/include/precompiled/stdc++.h \
 	${glibcxx_srcdir}/include/precompiled/stdtr1c++.h \
 	${glibcxx_srcdir}/include/precompiled/extc++.h
@@ -1051,6 +1050,7 @@ host_headers_extra = \
 	${host_builddir}/c++allocator.h \
 	${host_builddir}/c++io.h \
 	${host_builddir}/c++locale.h \
+	${host_builddir}/error_constants.h \
 	${host_builddir}/messages_members.h \
 	${host_builddir}/time_members.h
 
@@ -1106,6 +1106,7 @@ allstamped = \
 # catenation.
 allcreated = \
 	${host_builddir}/c++config.h \
+	${host_builddir}/error_constants.h \
 	${host_builddir}/largefile-config.h \
 	${thread_host_headers} \
 	${pch_build}
@@ -1403,6 +1404,9 @@ ${host_builddir}/c++config.h: ${CONFIG_HEADER} \
 	    < ${CONFIG_HEADER} >> $@ ;\
 	echo "" >> $@ ;\
 	echo "#endif // _GLIBCXX_CXX_CONFIG_H" >> $@
+
+${host_builddir}/error_constants.h: ${glibcxx_srcdir}/scripts/make_errc.sh
+	${glibcxx_srcdir}/scripts/make_errc.sh $@ "${CXXCPP}" ${AM_CPPFLAGS}
 
 # Host includes for threads
 uppercase = [ABCDEFGHIJKLMNOPQRSTUVWXYZ_]
