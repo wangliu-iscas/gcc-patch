@@ -19074,6 +19074,8 @@ lazy_load_binding (unsigned mod, tree ns, tree id, binding_slot *mslot)
 
   timevar_start (TV_MODULE_IMPORT);
 
+  processing_template_decl_sentinel ptds;
+
   /* Stop GC happening, even in outermost loads (because our caller
      could well be building up a lookup set).  */
   function_depth++;

@@ -876,7 +876,7 @@ check_classfn (tree ctype, tree function, tree template_parms)
 void
 note_vague_linkage_fn (tree decl)
 {
-  if (processing_template_decl)
+  if (value_dependent_expression_p (decl))
     return;
 
   DECL_DEFER_OUTPUT (decl) = 1;
