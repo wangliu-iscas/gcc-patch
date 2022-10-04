@@ -5568,7 +5568,7 @@ aarch64_internal_mov_immediate (rtx dest, rtx imm, bool generate,
   one_match = ((~val & mask) == 0) + ((~val & (mask << 16)) == 0) +
     ((~val & (mask << 32)) == 0) + ((~val & (mask << 48)) == 0);
 
-  if (zero_match != 2 && one_match != 2)
+  if (zero_match < 2 && one_match < 2)
     {
       /* Try emitting a bitmask immediate with a movk replacing 16 bits.
 	 For a 64-bit bitmask try whether changing 16 bits to all ones or
@@ -5597,6 +5597,43 @@ aarch64_internal_mov_immediate (rtx dest, rtx imm, bool generate,
 					 GEN_INT ((val >> i) & 0xffff)));
 	    }
 	  return 2;
+	}
+    }
+
+  /* Try a bitmask plus 2 movk to generate the immediate in 3 instructions.  */
+  if (zero_match + one_match == 0)
+    {
+      mask = 0xffffffff;
+
+      for (i = 0; i < 64; i += 16)
+	{
+	  val2 = val & ~mask;
+	  if (aarch64_bitmask_imm (val2, mode))
+	    break;
+	  val2 = val | mask;
+	  if (aarch64_bitmask_imm (val2, mode))
+	    break;
+	  val2 = val2 & ~mask;
+	  val2 = val2 | (((val2 >> 32) | (val2 << 32)) & mask);
+	  if (aarch64_bitmask_imm (val2, mode))
+	    break;
+
+	  mask = (mask << 16) | (mask >> 48);
+	}
+
+      if (i != 64)
+	{
+	  if (generate)
+	    {
+	      emit_insn (gen_rtx_SET (dest, GEN_INT (val2)));
+	      emit_insn (gen_insv_immdi (dest, GEN_INT (i),
+					 GEN_INT ((val >> i) & 0xffff)));
+	      i = (i + 16) & 63;
+	      emit_insn (gen_insv_immdi (dest, GEN_INT (i),
+					 GEN_INT ((val >> i) & 0xffff)));
+	    }
+
+	  return 3;
 	}
     }
 
