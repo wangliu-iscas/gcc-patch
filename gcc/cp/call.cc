@@ -9186,7 +9186,11 @@ conv_is_prvalue (conversion *c)
 {
   if (c->kind == ck_rvalue)
     return true;
-  if (c->kind == ck_base && c->need_temporary_p)
+  if (c->kind == ck_base
+      /* We may not need a temporary object for the base itself, but if it
+	 is the base subobject of a temporary object, we're still dealing
+	 with a prvalue.  */
+      && (c->need_temporary_p || conv_is_prvalue (next_conversion (c))))
     return true;
   if (c->kind == ck_user && !TYPE_REF_P (c->type))
     return true;
@@ -9417,7 +9421,16 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
       && (DECL_COPY_CONSTRUCTOR_P (fn)
 	  || DECL_MOVE_CONSTRUCTOR_P (fn))
       && !unsafe_return_slot_p (first_arg)
-      && conv_binds_ref_to_prvalue (convs[0]))
+      && conv_binds_ref_to_prvalue (convs[0])
+      /* Converting a class to another class that then binds to this
+	 copy/move constructor's argument is OK, but not when it's a
+	 derived-to-base conversion.  */
+      && [convs] {
+	   for (conversion *t = convs[0]; t; t = next_conversion (t))
+	     if (t->kind == ck_base)
+	       return false;
+	   return true;
+	 }())
     {
       force_elide = true;
       goto not_really_used;
