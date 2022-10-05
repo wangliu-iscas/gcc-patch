@@ -11286,7 +11286,8 @@ aarch64_select_cc_mode (RTX_CODE code, rtx x, rtx y)
 
   if ((mode_x == SImode || mode_x == DImode)
       && y == const0_rtx
-      && (code == EQ || code == NE || code == LT || code == GE)
+      && (code == EQ || code == NE || code == LT || code == GE
+	  || (code_x == AND && (code == GT || code == LE)))
       && (code_x == PLUS || code_x == MINUS || code_x == AND
 	  || code_x == NEG
 	  || (code_x == ZERO_EXTRACT && CONST_INT_P (XEXP (x, 1))
@@ -11434,6 +11435,8 @@ aarch64_get_condition_code_1 (machine_mode mode, enum rtx_code comp_code)
 	case EQ: return AARCH64_EQ;
 	case GE: return AARCH64_PL;
 	case LT: return AARCH64_MI;
+	case GT: return AARCH64_GT;
+	case LE: return AARCH64_LE;
 	default: return -1;
 	}
       break;
