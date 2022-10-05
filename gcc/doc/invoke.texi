@@ -28529,7 +28529,7 @@ particular CPU name.  Permissible values for this option are: @samp{rocket},
 @samp{thead-c906}, @samp{size}, and all valid options for @option{-mcpu=}.
 
 When @option{-mtune=} is not specified, use the setting from @option{-mcpu},
-the default is @samp{rocket} if both are not specified.
+the default is @samp{thead-c906} if both are not specified.
 
 The @samp{size} choice is not intended for use by end-users.  This is used
 when @option{-Os} is specified.  It overrides the instruction cost info
