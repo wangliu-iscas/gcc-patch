@@ -18164,6 +18164,7 @@ addition to the @option{-maltivec}, @option{-mpopcntd}, and
 The following basic built-in functions require @option{-mpopcntd}:
 @smallexample
 unsigned int __builtin_addg6s (unsigned int, unsigned int);
+unsigned long long __builtin_addg6s (unsigned long long, unsigned long long);
 long long __builtin_bpermd (long long, long long);
 unsigned int __builtin_cbcdtd (unsigned int);
 unsigned int __builtin_cdtbcd (unsigned int);

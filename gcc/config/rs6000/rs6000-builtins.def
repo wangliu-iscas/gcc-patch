@@ -2012,8 +2012,9 @@
 
 ; Power7 builtins (ISA 2.06).
 [power7]
-  const unsigned int __builtin_addg6s (unsigned int, unsigned int);
-    ADDG6S addg6s {}
+
+  const unsigned int __builtin_addg6s_32 (unsigned int, unsigned int);
+    ADDG6S_32 addg6ssi3 {}
 
   const signed long __builtin_bpermd (signed long, signed long);
     BPERMD bpermd_di {32bit}
@@ -2043,6 +2044,10 @@
 
 ; Power7 builtins requiring 64-bit GPRs (even with 32-bit addressing).
 [power7-64]
+
+  const unsigned long __builtin_addg6s_64 (unsigned long, unsigned long);
+    ADDG6S addg6sdi3 {no32bit}
+
   const signed long long __builtin_divde (signed long long, signed long long);
     DIVDE dive_di {}
 

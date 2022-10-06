@@ -1921,6 +1921,31 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
 	  return call;
 	break;
       }
+      /* We need to special case __builtin_addg6s because the overloaded
+	 forms of this function take (unsigned int, unsigned int) or
+	 (unsigned long long, unsigned long long).  Since C conventions
+	 allow the respective argument types to be implicitly coerced into
+	 each other, the default handling does not provide adequate
+	 discrimination between the desired forms of the function.  */
+    case RS6000_OVLD_ADDG6S_OV:
+      {
+	machine_mode arg1_mode = TYPE_MODE (types[0]);
+	machine_mode arg2_mode = TYPE_MODE (types[1]);
+
+	/* If any supplied arguments are wider than 32 bits, resolve to
+	   64-bit variant of built-in function.  */
+	if (GET_MODE_PRECISION (arg1_mode) > 32
+	    || GET_MODE_PRECISION (arg2_mode) > 32)
+	  instance_code = RS6000_BIF_ADDG6S;
+	else
+	  instance_code = RS6000_BIF_ADDG6S_32;
+
+	tree call = find_instance (&unsupported_builtin, &instance,
+				   instance_code, fcode, types, args);
+	if (call != error_mark_node)
+	  return call;
+	break;
+      }
     case RS6000_OVLD_VEC_VSIE:
       {
 	machine_mode arg1_mode = TYPE_MODE (types[0]);

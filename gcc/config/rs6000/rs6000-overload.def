@@ -195,6 +195,12 @@
   unsigned long long __builtin_cmpb (unsigned long long, unsigned long long);
     CMPB
 
+[ADDG6S_OV, SKIP, __builtin_addg6s]
+  unsigned int __builtin_addg6s (unsigned int, unsigned int);
+    ADDG6S_32
+  unsigned long long __builtin_addg6s (unsigned long long, unsigned long long);
+    ADDG6S
+
 [VEC_ABS, vec_abs, __builtin_vec_abs]
   vsc __builtin_vec_abs (vsc);
     ABS_V16QI
