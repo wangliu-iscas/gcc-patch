@@ -4571,6 +4571,31 @@ static tree gfc_trans_omp_sections (gfc_code *, gfc_omp_clauses *);
 static tree gfc_trans_omp_workshare (gfc_code *, gfc_omp_clauses *);
 
 static tree
+gfc_trans_omp_assume (gfc_code *code)
+{
+  stmtblock_t block;
+  gfc_init_block (&block);
+  gfc_omp_assumptions *assume = code->ext.omp_clauses->assume;
+  if (assume)
+    for (gfc_expr_list *el = assume->holds; el; el = el->next)
+      {
+	tree t;
+	gfc_se se;
+	gfc_init_se (&se, NULL);
+	gfc_conv_expr (&se, el->expr);
+	/* Avoid side effects. */
+	if (se.pre.head || se.post.head)
+	  continue;
+	t = build_call_expr_internal_loc (gfc_get_location (&el->expr->where),
+					  IFN_ASSUME, void_type_node, 1,
+					  se.expr);
+	gfc_add_expr_to_block (&block, t);
+      }
+  gfc_add_expr_to_block (&block, gfc_trans_omp_code (code->block->next, true));
+  return gfc_finish_block (&block);
+}
+
+static tree
 gfc_trans_omp_atomic (gfc_code *code)
 {
   gfc_code *atomic_code = code->block;
@@ -7488,7 +7513,7 @@ gfc_trans_omp_directive (gfc_code *code)
   switch (code->op)
     {
     case EXEC_OMP_ASSUME:
-      return gfc_trans_omp_code (code->block->next, true);
+      return gfc_trans_omp_assume (code);
     case EXEC_OMP_ATOMIC:
       return gfc_trans_omp_atomic (code);
     case EXEC_OMP_BARRIER:
