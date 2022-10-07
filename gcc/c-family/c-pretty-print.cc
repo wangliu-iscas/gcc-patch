@@ -466,11 +466,16 @@ pp_c_specifier_qualifier_list (c_pretty_printer *pp, tree t)
 	  {
 	    pp_c_whitespace (pp);
 	    pp_c_left_paren (pp);
+	    pp_ptr_operator (pp, t);
 	    pp_c_attributes_display (pp, TYPE_ATTRIBUTES (pointee));
 	  }
-	else if (!c_dialect_cxx ())
-	  pp_c_whitespace (pp);
-	pp_ptr_operator (pp, t);
+	else
+	  {
+	    /* Removing this WS inconsistency breaks too many tests.  */
+	    if (!c_dialect_cxx ())
+	      pp_c_whitespace (pp);
+	    pp_ptr_operator (pp, t);
+	  }
       }
       break;
 
@@ -850,32 +855,7 @@ c_pretty_printer::declaration (tree t)
   pp_c_init_declarator (this, t);
 }
 
-/* Pretty-print ATTRIBUTES using GNU C extension syntax.  */
-
-void
-pp_c_attributes (c_pretty_printer *pp, tree attributes)
-{
-  if (attributes == NULL_TREE)
-    return;
-
-  pp_c_ws_string (pp, "__attribute__");
-  pp_c_left_paren (pp);
-  pp_c_left_paren (pp);
-  for (; attributes != NULL_TREE; attributes = TREE_CHAIN (attributes))
-    {
-      pp_tree_identifier (pp, TREE_PURPOSE (attributes));
-      if (TREE_VALUE (attributes))
-	pp_c_call_argument_list (pp, TREE_VALUE (attributes));
-
-      if (TREE_CHAIN (attributes))
-	pp_separate_with (pp, ',');
-    }
-  pp_c_right_paren (pp);
-  pp_c_right_paren (pp);
-}
-
-/* Pretty-print ATTRIBUTES using GNU C extension syntax for attributes
-   marked to be displayed on disgnostic.  */
+/* Pretty-print ATTRIBUTES marked to be displayed on diagnostic.  */
 
 void
 pp_c_attributes_display (c_pretty_printer *pp, tree a)
@@ -885,10 +865,12 @@ pp_c_attributes_display (c_pretty_printer *pp, tree a)
   if (a == NULL_TREE)
     return;
 
+  const bool std_p = cxx11_attribute_p (a);
+
   for (; a != NULL_TREE; a = TREE_CHAIN (a))
     {
-      const struct attribute_spec *as;
-      as = lookup_attribute_spec (TREE_PURPOSE (a));
+      const struct attribute_spec *as
+	= lookup_attribute_spec (get_attribute_name (a));
       if (!as || as->affects_type_identity == false)
         continue;
       if (c_dialect_cxx ()
@@ -896,26 +878,46 @@ pp_c_attributes_display (c_pretty_printer *pp, tree a)
 	/* In C++ transaction_safe is printed at the end of the declarator.  */
 	continue;
       if (is_first)
-       {
-         pp_c_ws_string (pp, "__attribute__");
-         pp_c_left_paren (pp);
-         pp_c_left_paren (pp);
-         is_first = false;
-       }
+	{
+	  if (std_p)
+	    {
+	      pp_c_left_bracket (pp);
+	      pp_c_left_bracket (pp);
+	    }
+	  else
+	    {
+	      pp_c_ws_string (pp, "__attribute__");
+	      pp_c_left_paren (pp);
+	      pp_c_left_paren (pp);
+	    }
+	  is_first = false;
+	}
       else
-       {
-         pp_separate_with (pp, ',');
-       }
-      pp_tree_identifier (pp, TREE_PURPOSE (a));
+	pp_separate_with (pp, ',');
+      tree ns;
+      if (std_p && (ns = get_attribute_namespace (a)))
+	{
+	  pp_tree_identifier (pp, ns);
+	  pp_colon (pp);
+	  pp_colon (pp);
+	}
+      pp_tree_identifier (pp, get_attribute_name (a));
       if (TREE_VALUE (a))
-       pp_c_call_argument_list (pp, TREE_VALUE (a));
+	pp_c_call_argument_list (pp, TREE_VALUE (a));
     }
 
   if (!is_first)
     {
-      pp_c_right_paren (pp);
-      pp_c_right_paren (pp);
-      pp_c_whitespace (pp);
+      if (std_p)
+	{
+	  pp_c_right_bracket (pp);
+	  pp_c_right_bracket (pp);
+	}
+      else
+	{
+	  pp_c_right_paren (pp);
+	  pp_c_right_paren (pp);
+	}
     }
 }
 

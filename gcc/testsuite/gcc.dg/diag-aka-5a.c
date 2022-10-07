@@ -88,8 +88,8 @@ void f (struct s s)
   ue_fn_ptr4 = &s; /* { dg-error {assignment to 'user_enum_copy \(\*\)\(void\)' {aka 'user_enum \(\*\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
   ue_fn_ptr5 = &s; /* { dg-error {assignment to 'void \(\*\)\(user_enum_copy\)' {aka 'void \(\*\)\(user_enum\)'} from incompatible pointer type 'struct s \*'} } */
   ue_fn_ptr6 = &s; /* { dg-error {assignment to 'void \(\*\)\(user_enum_copy, \.\.\.\)' {aka 'void \(\*\)\(user_enum, \.\.\.\)'} from incompatible pointer type 'struct s \*'} } */
-  unsafe_ue_fn_ptr1 = &s; /* { dg-error {assignment to 'user_enum \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)' from incompatible pointer type 'struct s \*'} } */
-  unsafe_ue_fn_ptr2 = &s; /* { dg-error {assignment to 'user_enum_copy \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)' {aka 'user_enum \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
+  unsafe_ue_fn_ptr1 = &s; /* { dg-error {assignment to 'user_enum \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)' from incompatible pointer type 'struct s \*'} } */
+  unsafe_ue_fn_ptr2 = &s; /* { dg-error {assignment to 'user_enum_copy \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)' {aka 'user_enum \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
 
   us1 = s; /* { dg-error {assigning to type 'user_struct' from type 'struct s'} } */
   us2 = s; /* { dg-error {assigning to type 'user_struct_copy' {aka 'user_struct'} from type 'struct s'} } */
@@ -130,6 +130,6 @@ void f (struct s s)
   ui_fn_ptr4 = &s; /* { dg-error {assignment to 'user_int_copy \(\*\)\(void\)' {aka 'int \(\*\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
   ui_fn_ptr5 = &s; /* { dg-error {assignment to 'void \(\*\)\(user_int_copy\)' {aka 'void \(\*\)\(int\)'} from incompatible pointer type 'struct s \*'} } */
   ui_fn_ptr6 = &s; /* { dg-error {assignment to 'void \(\*\)\(user_int_copy, \.\.\.\)' {aka 'void \(\*\)\(int, \.\.\.\)'} from incompatible pointer type 'struct s \*'} } */
-  unsafe_ui_fn_ptr1 = &s; /* { dg-error {assignment to 'user_int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)' {aka 'int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
-  unsafe_ui_fn_ptr2 = &s; /* { dg-error {assignment to 'user_int_copy \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)' {aka 'int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
+  unsafe_ui_fn_ptr1 = &s; /* { dg-error {assignment to 'user_int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)' {aka 'int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
+  unsafe_ui_fn_ptr2 = &s; /* { dg-error {assignment to 'user_int_copy \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)' {aka 'int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(void\)'} from incompatible pointer type 'struct s \*'} } */
 }

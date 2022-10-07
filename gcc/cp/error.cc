@@ -897,7 +897,6 @@ dump_type_prefix (cxx_pretty_printer *pp, tree t, int flags)
 	  {
 	    pp_cxx_whitespace (pp);
 	    pp_cxx_left_paren (pp);
-	    pp_c_attributes_display (pp, TYPE_ATTRIBUTES (sub));
 	  }
 	if (TYPE_PTR_P (t))
 	  pp_star (pp);
@@ -908,6 +907,9 @@ dump_type_prefix (cxx_pretty_printer *pp, tree t, int flags)
 	    else
 	      pp_ampersand (pp);
 	  }
+	if (TREE_CODE (sub) == ARRAY_TYPE
+	    || TREE_CODE (sub) == FUNCTION_TYPE)
+	  pp_c_attributes_display (pp, TYPE_ATTRIBUTES (sub));
 	pp->padding = pp_before;
 	pp_cxx_cv_qualifier_seq (pp, t);
       }

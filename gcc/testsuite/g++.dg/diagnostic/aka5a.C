@@ -82,8 +82,8 @@ void f (s s1)
   ue_fn_ptr4 = &s1; // { dg-error {cannot convert 's\*' to 'user_enum_copy \(\*\)\(\)' {aka 'user_enum \(\*\)\(\)'} in assignment} }
   ue_fn_ptr5 = &s1; // { dg-error {cannot convert 's\*' to 'void \(\*\)\(user_enum_copy\)' {aka 'void \(\*\)\(user_enum\)'} in assignment} }
   ue_fn_ptr6 = &s1; // { dg-error {cannot convert 's\*' to 'void \(\*\)\(user_enum_copy, \.\.\.\)' {aka 'void \(\*\)\(user_enum, \.\.\.\)'} in assignment} }
-  unsafe_ue_fn_ptr1 = &s1; // { dg-error {cannot convert 's\*' to 'user_enum \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)' in assignment} }
-  unsafe_ue_fn_ptr2 = &s1; // { dg-error {cannot convert 's\*' to 'user_enum_copy \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)' {aka 'user_enum \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)'} in assignment} }
+  unsafe_ue_fn_ptr1 = &s1; // { dg-error {cannot convert 's\*' to 'user_enum \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)' in assignment} }
+  unsafe_ue_fn_ptr2 = &s1; // { dg-error {cannot convert 's\*' to 'user_enum_copy \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)' {aka 'user_enum \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)'} in assignment} }
 
   us1 = s1; // { dg-error {no match for 'operator=' in 'us1 = s1' \(operand types are 'user_struct' and 's'\)} }
   us2 = s1; // { dg-error {no match for 'operator=' in 'us2 = s1' \(operand types are 'user_struct_copy' {aka 'user_struct'} and 's'\)} }
@@ -122,6 +122,6 @@ void f (s s1)
   ui_fn_ptr4 = &s1; // { dg-error {cannot convert 's\*' to 'user_int_copy \(\*\)\(\)' {aka 'int \(\*\)\(\)'} in assignment} }
   ui_fn_ptr5 = &s1; // { dg-error {cannot convert 's\*' to 'void \(\*\)\(user_int_copy\)' {aka 'void \(\*\)\(int\)'} in assignment} }
   ui_fn_ptr6 = &s1; // { dg-error {cannot convert 's\*' to 'void \(\*\)\(user_int_copy, \.\.\.\)' {aka 'void \(\*\)\(int, \.\.\.\)'} in assignment} }
-  unsafe_ui_fn_ptr1 = &s1; // { dg-error {cannot convert 's\*' to 'user_int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)' {aka 'int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)'} in assignment} }
-  unsafe_ui_fn_ptr2 = &s1; // { dg-error {cannot convert 's\*' to 'user_int_copy \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)' {aka 'int \(__attribute__\(\(transaction_unsafe\)\) \*\)\(\)'} in assignment} }
+  unsafe_ui_fn_ptr1 = &s1; // { dg-error {cannot convert 's\*' to 'user_int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)' {aka 'int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)'} in assignment} }
+  unsafe_ui_fn_ptr2 = &s1; // { dg-error {cannot convert 's\*' to 'user_int_copy \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)' {aka 'int \(\*__attribute__\(\(transaction_unsafe\)\)\)\(\)'} in assignment} }
 }
