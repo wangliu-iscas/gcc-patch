@@ -24,9 +24,12 @@
    <http://www.gnu.org/licenses/>.  */
 
 #include "libgomp.h"
+#include "libgomp-nvptx.h"  /* For struct rev_offload + GOMP_REV_OFFLOAD_VAR. */
 #include <limits.h>
 
 extern int __gomp_team_num __attribute__((shared));
+extern volatile struct gomp_offload_icvs GOMP_ADDITIONAL_ICVS;
+volatile struct rev_offload *GOMP_REV_OFFLOAD_VAR;
 
 bool
 GOMP_teams4 (unsigned int num_teams_lower, unsigned int num_teams_upper,
@@ -88,16 +91,60 @@ GOMP_target_ext (int device, void (*fn) (void *), size_t mapnum,
 		 void **hostaddrs, size_t *sizes, unsigned short *kinds,
 		 unsigned int flags, void **depend, void **args)
 {
-  (void) device;
-  (void) fn;
-  (void) mapnum;
-  (void) hostaddrs;
-  (void) sizes;
-  (void) kinds;
+  static int lock = 0;  /* == gomp_mutex_t lock; gomp_mutex_init (&lock); */
   (void) flags;
   (void) depend;
   (void) args;
-  __builtin_unreachable ();
+
+  if (device != GOMP_DEVICE_HOST_FALLBACK
+      || fn == NULL
+      || GOMP_REV_OFFLOAD_VAR == NULL)
+    return;
+
+  gomp_mutex_lock (&lock);
+
+  GOMP_REV_OFFLOAD_VAR->mapnum = mapnum;
+  GOMP_REV_OFFLOAD_VAR->addrs = (uint64_t) hostaddrs;
+  GOMP_REV_OFFLOAD_VAR->sizes = (uint64_t) sizes;
+  GOMP_REV_OFFLOAD_VAR->kinds = (uint64_t) kinds;
+  GOMP_REV_OFFLOAD_VAR->dev_num = GOMP_ADDITIONAL_ICVS.device_num;
+
+  /* 'fn' must be last.  */
+#if __PTX_SM__ >= 700
+  uint64_t addr_struct_fn = (uint64_t) &GOMP_REV_OFFLOAD_VAR->fn;
+  asm volatile ("st.global.release.sys.u64 [%0], %1;"
+		: : "r"(addr_struct_fn), "r" (fn) : "memory");
+#else
+/* The following has been effectively disabled via mkoffload as it is unclear
+   whether there is the required consistency between host and device.
+   See https://gcc.gnu.org/pipermail/gcc-patches/2022-October/602715.html
+   Note: Using atomic with scope = .sys is already supported since >= 600.
+   The generated code is:
+     @ %r69 membar.sys;
+     @ %r69 atom.exch.b64 _,[%r27],%r41; */
+  __atomic_store_n (&GOMP_REV_OFFLOAD_VAR->fn, fn, __ATOMIC_RELEASE);
+#endif
+
+  /* Processed on the host - when done, fn is set to NULL.  */
+#if __PTX_SM__ >= 700
+  uint64_t fn2;
+  do
+    {
+      asm volatile ("ld.acquire.sys.global.u64 %0, [%1];"
+		    : "=r" (fn2) : "r" (addr_struct_fn) : "memory");
+    }
+  while (fn2 != 0);
+#else
+/* See remark above. The generated memory-access code is
+     ld.global.u64 %r64,[__gomp_rev_offload_var];
+     ld.u64 %r36,[%r64];
+     membar.sys;  */
+  __sync_synchronize ();  /* membar.sys */
+  while (__atomic_load_n (&GOMP_REV_OFFLOAD_VAR->fn, __ATOMIC_ACQUIRE) != 0)
+    ;  /* spin  */
+#endif
+
+  gomp_mutex_unlock (&lock);
 }
 
 void

@@ -258,6 +258,7 @@ process (FILE *in, FILE *out, uint32_t omp_requires)
   unsigned ix;
   const char *sm_ver = NULL, *version = NULL;
   const char *sm_ver2 = NULL, *version2 = NULL;
+  const char *sm_libgomp = NULL;
   size_t file_cnt = 0;
   size_t *file_idx = XALLOCAVEC (size_t, len);
 
@@ -268,6 +269,7 @@ process (FILE *in, FILE *out, uint32_t omp_requires)
   for (size_t i = 0; i != len;)
     {
       char c;
+      bool is_libgomp = false;
       bool output_fn_ptr = false;
       file_idx[file_cnt++] = i;
 
@@ -289,6 +291,13 @@ process (FILE *in, FILE *out, uint32_t omp_requires)
 	      if (UNLIKELY (startswith (input + i, ".version ")))
 		{
 		  version = input + i + strlen (".version ");
+		  continue;
+		}
+	      if (UNLIKELY (startswith (input + i,
+					"// BEGIN GLOBAL FUNCTION "
+					"DEF: GOMP_target_ext")))
+		{
+		  is_libgomp = true;
 		  continue;
 		}
 	      while (startswith (input + i, "//:"))
@@ -319,27 +328,48 @@ process (FILE *in, FILE *out, uint32_t omp_requires)
 	  putc (c, out);
 	}
       fprintf (out, "\";\n\n");
+      if (is_libgomp)
+	sm_libgomp = sm_ver;
       if (output_fn_ptr
 	  && (omp_requires & GOMP_REQUIRES_REVERSE_OFFLOAD) != 0)
 	{
-	  if (sm_ver && sm_ver[0] == '3' && sm_ver[1] == '0'
-	      && sm_ver[2] == '\n')
-	    {
-	      warning_at (input_location, 0,
-			  "%<omp requires reverse_offload%> requires at "
-			  "least %<sm_35%> for "
-			  "%<-foffload-options=nvptx-none=-march=%> - disabling"
-			  " offload-code generation for this device type");
-	      /* As now an empty file is compiled and there is no call to
-		 GOMP_offload_register_ver, this device type is effectively
-		 disabled.  */
-	      fflush (out);
-	      ftruncate (fileno (out), 0);
-	      return;
-	    }
 	  sm_ver2 = sm_ver;
 	  version2 = version;
 	}
+    }
+  if (sm_ver2 && sm_libgomp
+      && sm_libgomp[0] < '7' && sm_libgomp[1] && sm_libgomp[2] == '\n')
+    {
+      /* The code for nvptx for GOMP_target_ext in libgomp/config/nvptx/target.c
+	 for < sm_70 exists but is disabled here as it is unclear whether there
+	 is the required consistency between host and device.
+	 See https://gcc.gnu.org/pipermail/gcc-patches/2022-October/602715.html
+	 for details.  */
+      warning_at (input_location, 0,
+		  "Disabling offload-code generation for this device type: "
+		  "%<omp requires reverse_offload%> can only be fulfilled "
+		  "for %<sm_70%> or higher");
+      inform (UNKNOWN_LOCATION,
+	      "Reverse offload requires that GCC is configured with "
+	      "%<--with-arch=sm_70%> or higher and not overridden by a lower "
+	      "value for %<-foffload-options=nvptx-none=-march=%>");
+      /* As now an empty file is compiled and there is no call to
+	 GOMP_offload_register_ver, this device type is effectively disabled.  */
+      fflush (out);
+      ftruncate (fileno (out), 0);
+      return;
+    }
+  if (sm_ver2 && sm_ver2[0] == '3' && sm_ver2[1] == '0' && sm_ver[2] == '\n')
+    {
+      warning_at (input_location, 0,
+		  "%<omp requires reverse_offload%> requires at least %<sm_35%> "
+		  "for %<-foffload-options=nvptx-none=-march=%> - disabling "
+		  "offload-code generation for this device type");
+      /* As now an empty file is compiled and there is no call to
+	 GOMP_offload_register_ver, this device type is effectively disabled.  */
+      fflush (out);
+      ftruncate (fileno (out), 0);
+      return;
     }
 
   /* Create function-pointer array, required for reverse
