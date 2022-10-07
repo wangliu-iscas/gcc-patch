@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "internal-fn.h"
 #include "gcc-rich-location.h"
 #include "cp-name-hint.h"
+#include "attribs.h"
 
 #define pp_separate_with_comma(PP) pp_cxx_separate_with (PP, ',')
 #define pp_separate_with_semicolon(PP) pp_cxx_separate_with (PP, ';')
@@ -897,7 +898,12 @@ dump_type_prefix (cxx_pretty_printer *pp, tree t, int flags)
 	  {
 	    pp_cxx_whitespace (pp);
 	    pp_cxx_left_paren (pp);
-	    pp_c_attributes_display (pp, TYPE_ATTRIBUTES (sub));
+	    /* If we're dealing with the GNU form of attributes, print this:
+		 void (__attribute__((noreturn)) *f) ();
+	       If it is the standard [[]] attribute, we'll print the attribute
+	       in dump_type_suffix.  */
+	    if (!cxx11_attribute_p (TYPE_ATTRIBUTES (sub)))
+	      pp_c_attributes_display (pp, TYPE_ATTRIBUTES (sub));
 	  }
 	if (TYPE_PTR_P (t))
 	  pp_star (pp);
@@ -1027,6 +1033,15 @@ dump_type_suffix (cxx_pretty_printer *pp, tree t, int flags)
 			      TREE_CODE (t) == FUNCTION_TYPE
 			      && (flags & TFF_POINTER));
 	dump_ref_qualifier (pp, t, flags);
+	/* If this is the standard [[]] attribute, print
+	     void (*)() [[noreturn]];  */
+	if ((flags & TFF_POINTER)
+	    && cxx11_attribute_p (TYPE_ATTRIBUTES (t)))
+	  {
+	    pp_space (pp);
+	    pp_c_attributes_display (pp, TYPE_ATTRIBUTES (t));
+	    pp->padding = pp_before;
+	  }
 	if (tx_safe_fn_type_p (t))
 	  pp_cxx_ws_string (pp, "transaction_safe");
 	dump_exception_spec (pp, TYPE_RAISES_EXCEPTIONS (t), flags);
