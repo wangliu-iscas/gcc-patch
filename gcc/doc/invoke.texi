@@ -11381,7 +11381,7 @@ results.  This is the default.
 Optimize for size.  @option{-Os} enables all @option{-O2} optimizations 
 except those that often increase code size:
 
-@gccoptlist{-falign-functions  -falign-jumps @gol
+@gccoptlist{-falign-jumps @gol
 -falign-labels  -falign-loops @gol
 -fprefetch-loop-arrays  -freorder-blocks-algorithm=stc}
 

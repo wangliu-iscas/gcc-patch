@@ -1923,8 +1923,7 @@ assemble_start_function (tree decl, const char *fnname)
      Note that we still need to align to DECL_ALIGN, as above,
      because ASM_OUTPUT_MAX_SKIP_ALIGN might not do any alignment at all.  */
   if (! DECL_USER_ALIGN (decl)
-      && align_functions.levels[0].log > align
-      && optimize_function_for_speed_p (cfun))
+      && align_functions.levels[0].log > align)
     {
 #ifdef ASM_OUTPUT_MAX_SKIP_ALIGN
       int align_log = align_functions.levels[0].log;
