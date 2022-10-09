@@ -33,6 +33,3 @@ if (var(1)%p(1).ne.8) stop 1
 if (var(2)%p(2).ne.10) stop 2
 
 end
-
-! This is fixed by the address inspector/address tokenization patch.
-! { dg-xfail-run-if TODO { offload_device_nonshared_as } }

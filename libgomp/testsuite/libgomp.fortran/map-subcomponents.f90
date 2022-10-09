@@ -30,6 +30,3 @@ gvar%myf%d(1) = gvar%myf%d(1) + 1
 if (gvar%myf%d(1).ne.1) stop 1
 
 end program myprog
-
-! This is fixed by the address inspector/address tokenization patch.
-! { dg-xfail-run-if TODO { offload_device_nonshared_as } }
