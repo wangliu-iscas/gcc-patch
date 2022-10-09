@@ -67,6 +67,10 @@
 
 #include "rs6000-internal.h"
 
+#if TARGET_MACHO
+//TODO #include "dbxout.h" /* dbxout_ */
+#endif
+
 #ifndef TARGET_PROFILE_KERNEL
 #define TARGET_PROFILE_KERNEL 0
 #endif

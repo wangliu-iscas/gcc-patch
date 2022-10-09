@@ -47,6 +47,9 @@
 #include "diagnostic-core.h"
 #include "alias.h"
 #include "rs6000-internal.h"
+#if TARGET_MACHO
+//TODO #include "dbxout.h" /* dbxout_ */
+#endif
 
 static int rs6000_ra_ever_killed (void);
 static void is_altivec_return_reg (rtx, void *);
