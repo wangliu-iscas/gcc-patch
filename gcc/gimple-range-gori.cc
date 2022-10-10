@@ -798,20 +798,12 @@ gori_compute::logical_combine (vrange &r, enum tree_code code,
   // would be lost.
   if (!range_is_either_true_or_false (lhs))
     {
-      bool res;
       Value_Range r1 (r);
       if (logical_combine (r1, code, m_bool_zero, op1_true, op1_false,
 			   op2_true, op2_false)
 	  && logical_combine (r, code, m_bool_one, op1_true, op1_false,
 			      op2_true, op2_false))
-	{
-	  r.union_ (r1);
-	  res = true;
-	}
-      else
-	res = false;
-      if (idx)
-	tracer.trailer (idx, "logical_combine", res, NULL_TREE, r);
+	r.union_ (r1);
     }
 
   switch (code)
