@@ -50,6 +50,22 @@ using namespace riscv_vector;
 
 namespace riscv_vector {
 
+/* Static information about each vector type.  */
+struct vector_type_info
+{
+  /* The name of the type as declared by riscv_vector.h
+     which is recommend to use. For example: 'vint32m1_t'.  */
+  const char *name;
+
+  /* ABI name of vector type. The type is always available
+     under this name, even when riscv_vector.h isn't included.
+     For example:  '__rvv_int32m1_t'.  */
+  const char *abi_name;
+
+  /* The C++ mangling of ABI_NAME.  */
+  const char *mangled_name;
+};
+
 /* Information about each RVV type.  */
 static CONSTEXPR const vector_type_info vector_types[] = {
 #define DEF_RVV_TYPE(USER_NAME, NCHARS, ABI_NAME, ARGS...)    \

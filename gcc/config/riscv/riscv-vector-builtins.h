@@ -26,22 +26,6 @@ namespace riscv_vector {
 /* This is for segment instructions.  */
 const unsigned int MAX_TUPLE_SIZE = 8;
 
-/* Static information about each vector type.  */
-struct vector_type_info
-{
-  /* The name of the type as declared by riscv_vector.h
-     which is recommend to use. For example: 'vint32m1_t'.  */
-  const char *user_name;
-
-  /* ABI name of vector type. The type is always available
-     under this name, even when riscv_vector.h isn't included.
-     For example:  '__rvv_int32m1_t'.  */
-  const char *abi_name;
-
-  /* The C++ mangling of ABI_NAME.  */
-  const char *mangled_name;
-};
-
 /* Enumerates the RVV types, together called
    "vector types" for brevity.  */
 enum vector_type_index
