@@ -1025,8 +1025,7 @@ build_co_await (location_t loc, tree a, suspend_point_kind suspend_kind)
   else
     {
       e_proxy = get_awaitable_var (suspend_kind, o_type);
-      o = cp_build_modify_expr (loc, e_proxy, INIT_EXPR, o,
-				tf_warning_or_error);
+      o = cp_build_init_expr (loc, e_proxy, o);
     }
 
   /* I suppose we could check that this is contextually convertible to bool.  */
@@ -2889,8 +2888,7 @@ flatten_await_stmt (var_nest_node *n, hash_set<tree> *promoted,
 	  gcc_checking_assert (!already_present);
 	  tree inner = TREE_OPERAND (init, 1);
 	  gcc_checking_assert (TREE_CODE (inner) != COND_EXPR);
-	  init = cp_build_modify_expr (input_location, var, INIT_EXPR, init,
-				       tf_warning_or_error);
+	  init = cp_build_init_expr (var, init);
 	  /* Simplify for the case that we have an init containing the temp
 	     alone.  */
 	  if (t == n->init && n->var == NULL_TREE)
@@ -3656,8 +3654,7 @@ await_statement_walker (tree *stmt, int *do_subtree, void *d)
 	    if (TREE_CODE (cond_inner) == CLEANUP_POINT_EXPR)
 	      cond_inner = TREE_OPERAND (cond_inner, 0);
 	    location_t sloc = EXPR_LOCATION (SWITCH_STMT_COND (sw_stmt));
-	    tree new_s = cp_build_init_expr (sloc, newvar,
-				     cond_inner);
+	    tree new_s = cp_build_init_expr (sloc, newvar, cond_inner);
 	    finish_expr_stmt (new_s);
 	    SWITCH_STMT_COND (sw_stmt) = newvar;
 	    /* Now add the switch statement with the condition re-
@@ -4902,9 +4899,8 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
 	      if (flag_exceptions)
 		{
 		  /* This var is now live.  */
-		  r = build_modify_expr (fn_start, parm.guard_var,
-					 boolean_type_node, INIT_EXPR, fn_start,
-					 boolean_true_node, boolean_type_node);
+		  r = cp_build_init_expr (fn_start, parm.guard_var,
+					  boolean_true_node);
 		  finish_expr_stmt (r);
 		}
 	    }
@@ -4948,9 +4944,7 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
       r = coro_build_cvt_void_expr_stmt (r, fn_start);
       finish_expr_stmt (r);
 
-      r = build_modify_expr (fn_start, coro_promise_live, boolean_type_node,
-			     INIT_EXPR, fn_start, boolean_true_node,
-			     boolean_type_node);
+      r = cp_build_init_expr (fn_start, coro_promise_live, boolean_true_node);
       finish_expr_stmt (r);
 
       promise_dtor
@@ -5031,8 +5025,7 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
 				       NULL_TREE);
       add_decl_expr (gro);
       gro_bind_vars = gro;
-      r = cp_build_modify_expr (input_location, gro, INIT_EXPR, get_ro,
-				tf_warning_or_error);
+      r = cp_build_init_expr (gro, get_ro);
       /* The constructed object might require a cleanup.  */
       if (TYPE_HAS_NONTRIVIAL_DESTRUCTOR (gro_type))
 	{
@@ -5053,9 +5046,7 @@ morph_fn_to_coro (tree orig, tree *resumer, tree *destroyer)
      cleanup.  */
   if (gro_ret_dtor)
     {
-       r = build_modify_expr (fn_start, coro_gro_live, boolean_type_node,
-			      INIT_EXPR, fn_start, boolean_true_node,
-			      boolean_type_node);
+       r = cp_build_init_expr (fn_start, coro_gro_live, boolean_true_node);
       finish_expr_stmt (r);
     }
   /* Initialize the resume_idx_var to 0, meaning "not started".  */
