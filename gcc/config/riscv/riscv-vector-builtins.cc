@@ -86,23 +86,6 @@ static GTY(()) tree abi_vector_types[NUM_VECTOR_TYPES + 1];
 extern GTY(()) tree builtin_vector_types[MAX_TUPLE_SIZE][NUM_VECTOR_TYPES + 1];
 tree builtin_vector_types[MAX_TUPLE_SIZE][NUM_VECTOR_TYPES + 1];
 
-rvv_switcher::rvv_switcher ()
-{
-  /* Set have_regs_of_mode before targetm.init_builtins ().  */
-  memcpy (m_old_have_regs_of_mode, have_regs_of_mode,
-	  sizeof (have_regs_of_mode));
-  for (int i = 0; i < NUM_MACHINE_MODES; ++i)
-    if (riscv_v_ext_enabled_vector_mode_p ((machine_mode) i))
-      have_regs_of_mode[i] = true;
-}
-
-rvv_switcher::~rvv_switcher ()
-{
-  /* Recover back have_regs_of_mode.  */
-  memcpy (have_regs_of_mode, m_old_have_regs_of_mode,
-	  sizeof (have_regs_of_mode));
-}
-
 /* Add type attributes to builtin type tree, currently only the mangled name. */
 static void
 add_vector_type_attribute (tree type, const char *mangled_name)
@@ -138,19 +121,6 @@ lookup_vector_type_attribute (const_tree type)
   if (type == error_mark_node)
     return NULL_TREE;
   return lookup_attribute ("RVV type", TYPE_ATTRIBUTES (type));
-}
-
-/* If TYPE is a built-in type defined by the RVV ABI, return the mangled name,
-   otherwise return NULL.  */
-const char *
-mangle_builtin_type (const_tree type)
-{
-  if (TYPE_NAME (type) && TREE_CODE (TYPE_NAME (type)) == TYPE_DECL)
-    type = TREE_TYPE (TYPE_NAME (type));
-  if (tree attr = lookup_vector_type_attribute (type))
-    if (tree id = TREE_VALUE (chain_index (0, TREE_VALUE (attr))))
-      return IDENTIFIER_POINTER (id);
-  return NULL;
 }
 
 /* Register the built-in RVV ABI types, such as __rvv_int32m1_t.  */
@@ -229,6 +199,55 @@ register_vector_type (vector_type_index type)
     vectype = TREE_TYPE (decl);
 
   builtin_vector_types[0][type] = vectype;
+}
+
+/* RAII class for enabling enough RVV features to define the built-in
+   types and implement the riscv_vector.h pragma.
+
+   Note: According to 'TYPE_MODE' macro implementation, we need set
+   have_regs_of_mode[mode] to be true if we want to get the exact mode
+   from 'TYPE_MODE'. However, have_regs_of_mode has not been set yet in
+   targetm.init_builtins (). We need rvv_switcher to set have_regs_of_mode
+   before targetm.init_builtins () and recover back have_regs_of_mode
+   after targetm.init_builtins ().  */
+class rvv_switcher
+{
+public:
+  rvv_switcher ();
+  ~rvv_switcher ();
+
+private:
+  bool m_old_have_regs_of_mode[MAX_MACHINE_MODE];
+};
+
+rvv_switcher::rvv_switcher ()
+{
+  /* Set have_regs_of_mode before targetm.init_builtins ().  */
+  memcpy (m_old_have_regs_of_mode, have_regs_of_mode,
+	  sizeof (have_regs_of_mode));
+  for (int i = 0; i < NUM_MACHINE_MODES; ++i)
+    if (riscv_v_ext_enabled_vector_mode_p ((machine_mode) i))
+      have_regs_of_mode[i] = true;
+}
+
+rvv_switcher::~rvv_switcher ()
+{
+  /* Recover back have_regs_of_mode.  */
+  memcpy (have_regs_of_mode, m_old_have_regs_of_mode,
+	  sizeof (have_regs_of_mode));
+}
+
+/* If TYPE is a built-in type defined by the RVV ABI, return the mangled name,
+   otherwise return NULL.  */
+const char *
+mangle_builtin_type (const_tree type)
+{
+  if (TYPE_NAME (type) && TREE_CODE (TYPE_NAME (type)) == TYPE_DECL)
+    type = TREE_TYPE (TYPE_NAME (type));
+  if (tree attr = lookup_vector_type_attribute (type))
+    if (tree id = TREE_VALUE (chain_index (0, TREE_VALUE (attr))))
+      return IDENTIFIER_POINTER (id);
+  return NULL;
 }
 
 /* Initialize all compiler built-ins related to RVV that should be
