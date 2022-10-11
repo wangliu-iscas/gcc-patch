@@ -109,8 +109,8 @@ add_vector_type_attribute (tree type, const char *mangled_name)
 {
   tree mangled_name_tree = get_identifier (mangled_name);
   tree value = tree_cons (NULL_TREE, mangled_name_tree, NULL_TREE);
-  TYPE_ATTRIBUTES (type) = tree_cons (get_identifier ("RVV type"), value,
-				      TYPE_ATTRIBUTES (type));
+  TYPE_ATTRIBUTES (type)
+    = tree_cons (get_identifier ("RVV type"), value, TYPE_ATTRIBUTES (type));
 }
 
 /* Force TYPE to be a sizeless type.  */
