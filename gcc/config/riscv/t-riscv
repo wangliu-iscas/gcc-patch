@@ -6,12 +6,14 @@ riscv-builtins.o: $(srcdir)/config/riscv/riscv-builtins.cc $(CONFIG_H) \
 		$(srcdir)/config/riscv/riscv-builtins.cc
 
 riscv-vector-builtins.o: $(srcdir)/config/riscv/riscv-vector-builtins.cc \
-  $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(TREE_H) $(RTL_H) $(TM_P_H) \
-  memmodel.h insn-codes.h $(OPTABS_H) $(RECOG_H) $(DIAGNOSTIC_H) $(EXPR_H) \
-  $(FUNCTION_H) fold-const.h gimplify.h explow.h stor-layout.h $(REGS_H) \
-  alias.h langhooks.h attribs.h stringpool.h \
-  $(srcdir)/config/riscv/riscv-vector-builtins.h \
-	$(srcdir)/config/riscv/riscv-vector-builtins.def
+  $(srcdir)/config/riscv/riscv-vector-builtins.def \
+  $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(TREE_H) $(RTL_H) \
+  $(TM_P_H) memmodel.h insn-codes.h $(OPTABS_H) $(RECOG_H) $(DIAGNOSTIC_H) \
+  $(EXPR_H) $(BASIC_BLOCK_H) $(FUNCTION_H) fold-const.h $(GIMPLE_H) \
+  gimple-iterator.h gimplify.h explow.h $(EMIT_RTL_H) tree-vector-builder.h \
+  stor-layout.h $(REG_H) alias.h gimple-fold.h langhooks.h \
+  stringpool.h \
+  $(srcdir)/config/riscv/riscv-vector-builtins.h
 	$(COMPILER) -c $(ALL_COMPILERFLAGS) $(ALL_CPPFLAGS) $(INCLUDES) \
 		$(srcdir)/config/riscv/riscv-vector-builtins.cc
 
