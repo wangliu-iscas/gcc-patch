@@ -1327,6 +1327,9 @@ maybe_splice_retval_cleanup (tree compound_stmt)
        && current_binding_level->level_chain->kind == sk_function_parms);
 
   if ((function_body || current_binding_level->kind == sk_try)
+      /* When we're processing a default argument, c_f_d may not have been
+	 set.  */
+      && current_function_decl
       && !DECL_CONSTRUCTOR_P (current_function_decl)
       && !DECL_DESTRUCTOR_P (current_function_decl)
       && current_retval_sentinel)
