@@ -13196,7 +13196,8 @@ equivalent and mean that functions are not aligned.
 If @var{n} is not specified or is zero, use a machine-dependent default.
 The maximum allowed @var{n} option value is 65536.
 
-Enabled at levels @option{-O2}, @option{-O3}.
+Enabled at levels @option{-O2}, @option{-O3}.  This has no behavior under under
+@option{-Os}.
 
 @item -flimit-function-alignment
 If this option is enabled, the compiler tries to avoid unnecessarily
