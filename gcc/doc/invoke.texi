@@ -13168,7 +13168,9 @@ effective only in combination with @option{-fstrict-aliasing}.
 Align the start of functions to the next power-of-two greater than or
 equal to @var{n}, skipping up to @var{m}-1 bytes.  This ensures that at
 least the first @var{m} bytes of the function can be fetched by the CPU
-without crossing an @var{n}-byte alignment boundary.
+without crossing an @var{n}-byte alignment boundary.  This does not override
+functions that otherwise specify their own alignment constraints, such as via
+an alignment attribute.
 
 If @var{m} is not specified, it defaults to @var{n}.
 
