@@ -2831,7 +2831,10 @@ swap_endian_selector_for_mode (machine_mode mode)
     }
 
   for (i = 0; i < 16; ++i)
-    perm[i] = GEN_INT (swaparray[i]);
+    if (BYTES_BIG_ENDIAN)
+      perm[i] = GEN_INT (swaparray[i]);
+    else
+      perm[i] = GEN_INT (~swaparray[i] & 0x0000001f);
 
   return force_reg (V16QImode, gen_rtx_CONST_VECTOR (V16QImode,
 						     gen_rtvec_v (16, perm)));
