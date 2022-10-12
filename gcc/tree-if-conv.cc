@@ -3298,10 +3298,20 @@ get_bitfield_rep (gassign *stmt, bool write, tree *bitpos,
     *struct_expr = TREE_OPERAND (comp_ref, 0);
 
   if (bitpos)
-    *bitpos
-      = fold_build2 (MINUS_EXPR, bitsizetype,
-		     DECL_FIELD_BIT_OFFSET (field_decl),
-		     DECL_FIELD_BIT_OFFSET (rep_decl));
+    {
+      tree bf_pos = fold_build2 (MULT_EXPR, bitsizetype,
+				 DECL_FIELD_OFFSET (field_decl),
+				 build_int_cst (bitsizetype, 8));
+      bf_pos = fold_build2 (PLUS_EXPR, bitsizetype, bf_pos,
+			    DECL_FIELD_BIT_OFFSET (field_decl));
+      tree rep_pos = fold_build2 (MULT_EXPR, bitsizetype,
+				  DECL_FIELD_OFFSET (rep_decl),
+				  build_int_cst (bitsizetype, 8));
+      rep_pos = fold_build2 (PLUS_EXPR, bitsizetype, rep_pos,
+			     DECL_FIELD_BIT_OFFSET (rep_decl));
+
+      *bitpos = fold_build2 (MINUS_EXPR, bitsizetype, bf_pos, rep_pos);
+    }
 
   return rep_decl;
 
