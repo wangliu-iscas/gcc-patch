@@ -1205,6 +1205,10 @@ walk_array_constructor (gfc_typespec *ts, gfc_constructor_base head)
   for (c = gfc_constructor_first (head); c; c = gfc_constructor_next (c))
     {
       e = c->expr;
+
+      if (e->expr_type == EXPR_OP)
+	gfc_simplify_expr (e, 0);
+
       if (e->expr_type == EXPR_ARRAY && e->ts.type == BT_UNKNOWN
 	  && !e->ref && e->value.constructor)
 	{
