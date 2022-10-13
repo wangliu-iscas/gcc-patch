@@ -200,6 +200,124 @@ frelop_early_resolve (irange &r, tree type,
 	  && relop_early_resolve (r, type, op1, op2, rel, my_rel));
 }
 
+// If R contains a NAN of unknown sign, update the NAN's signbit
+// depending on two operands.
+
+inline void
+update_nan_sign (frange &r, const frange &op1, const frange &op2)
+{
+  if (!r.maybe_isnan ())
+    return;
+
+  bool op1_nan = op1.maybe_isnan ();
+  bool op2_nan = op2.maybe_isnan ();
+  bool sign1, sign2;
+
+  gcc_checking_assert (!r.nan_signbit_p (sign1));
+  if (op1_nan && op2_nan)
+    {
+      if (op1.nan_signbit_p (sign1) && op2.nan_signbit_p (sign2))
+	r.update_nan (sign1 | sign2);
+    }
+  else if (op1_nan)
+    {
+      if (op1.nan_signbit_p (sign1))
+	r.update_nan (sign1);
+    }
+  else if (op2_nan)
+    {
+      if (op2.nan_signbit_p (sign2))
+	r.update_nan (sign2);
+    }
+}
+
+// If either operand is a NAN, set R to the combination of both NANs
+// signwise and return TRUE.
+
+inline bool
+propagate_nans (frange &r, const frange &op1, const frange &op2)
+{
+  if (op1.known_isnan () || op2.known_isnan ())
+    {
+      r.set_nan (op1.type ());
+      update_nan_sign (r, op1, op2);
+      return true;
+    }
+  return false;
+}
+
+// Set VALUE to its next real value, or INF if the operation overflows.
+
+inline void
+frange_nextafter (enum machine_mode mode,
+		  REAL_VALUE_TYPE &value,
+		  const REAL_VALUE_TYPE &inf)
+{
+  const real_format *fmt = REAL_MODE_FORMAT (mode);
+  REAL_VALUE_TYPE tmp;
+  bool overflow = real_nextafter (&tmp, fmt, &value, &inf);
+  if (overflow)
+    value = inf;
+  else
+    value = tmp;
+}
+
+// Like real_arithmetic, but round the result to INF if the operation
+// produced inexact results.
+//
+// ?? There is still one problematic case, i387.  With
+// -fexcess-precision=standard we perform most SF/DFmode arithmetic in
+// XFmode (long_double_type_node), so that case is OK.  But without
+// -mfpmath=sse, all the SF/DFmode computations are in XFmode
+// precision (64-bit mantissa) and only occassionally rounded to
+// SF/DFmode (when storing into memory from the 387 stack).  Maybe
+// this is ok as well though it is just occassionally more precise. ??
+
+static void
+frange_arithmetic (enum tree_code code, tree type,
+		   REAL_VALUE_TYPE &result,
+		   const REAL_VALUE_TYPE &op1,
+		   const REAL_VALUE_TYPE &op2,
+		   const REAL_VALUE_TYPE &inf)
+{
+  REAL_VALUE_TYPE value;
+  enum machine_mode mode = TYPE_MODE (type);
+  bool mode_composite = MODE_COMPOSITE_P (mode);
+
+  bool inexact = real_arithmetic (&value, code, &op1, &op2);
+  real_convert (&result, mode, &value);
+
+  // If real_convert above has rounded an inexact value to towards
+  // inf, we can keep the result as is, otherwise we'll adjust by 1 ulp
+  // later (real_nextafter).
+  bool rounding = (flag_rounding_math
+		   && (real_isneg (&inf)
+		       ? real_less (&result, &value)
+		       : !real_less (&value, &result)));
+
+  // Be extra careful if there may be discrepancies between the
+  // compile and runtime results.
+  if ((rounding || mode_composite)
+      && (inexact || !real_identical (&result, &value)))
+    {
+      if (mode_composite)
+	{
+	  bool denormal = (result.sig[SIGSZ-1] & SIG_MSB) == 0;
+	  if (denormal)
+	    {
+	      REAL_VALUE_TYPE tmp;
+	      real_convert (&tmp, DFmode, &value);
+	      frange_nextafter (DFmode, tmp, inf);
+	      real_convert (&result, mode, &tmp);
+	    }
+	  else
+	    frange_nextafter (mode, result, inf);
+	}
+      else
+	frange_nextafter (mode, result, inf);
+    }
+}
+
 // Crop R to [-INF, MAX] where MAX is the maximum representable number
 // for TYPE.
 
@@ -1620,6 +1738,58 @@ foperator_unordered_equal::op1_range (frange &r, tree type,
   return true;
 }
 
+class foperator_plus : public range_operator_float
+{
+  using range_operator_float::fold_range;
+
+public:
+  bool fold_range (frange &r, tree type,
+		   const frange &lh,
+		   const frange &rh,
+		   relation_kind rel = VREL_VARYING) const final override;
+} fop_plus;
+
+bool
+foperator_plus::fold_range (frange &r, tree type,
+			    const frange &op1, const frange &op2,
+			    relation_kind) const
+{
+  if (empty_range_varying (r, type, op1, op2))
+    return true;
+  if (propagate_nans (r, op1, op2))
+    return true;
+
+  REAL_VALUE_TYPE lb, ub;
+  frange_arithmetic (PLUS_EXPR, type, lb,
+		     op1.lower_bound (), op2.lower_bound (), dconstninf);
+  frange_arithmetic (PLUS_EXPR, type, ub,
+		     op1.upper_bound (), op2.upper_bound (), dconstinf);
+
+  // Handle possible NANs by saturating to the appropriate INF if only
+  // one end is a NAN.  If both ends are a NAN, just return a NAN.
+  bool lb_nan = real_isnan (&lb);
+  bool ub_nan = real_isnan (&ub);
+  if (lb_nan && ub_nan)
+    {
+      r.set_nan (type);
+      return true;
+    }
+  if (lb_nan)
+    lb = dconstninf;
+  else if (ub_nan)
+    ub = dconstinf;
+
+  // The setter sets NAN by default for HONOR_NANS.
+  r.set (type, lb, ub);
+
+  if (lb_nan || ub_nan)
+    update_nan_sign (r, op1, op2);
+  else if (!op1.maybe_isnan () && !op2.maybe_isnan ())
+    r.clear_nan ();
+
+  return true;
+}
+
 // Instantiate a range_op_table for floating point operations.
 static floating_op_table global_floating_table;
 
@@ -1652,6 +1822,7 @@ floating_op_table::floating_op_table ()
 
   set (ABS_EXPR, fop_abs);
   set (NEGATE_EXPR, fop_negate);
+  set (PLUS_EXPR, fop_plus);
 }
 
 // Return a pointer to the range_operator_float instance, if there is
