@@ -12303,9 +12303,12 @@ trees_in::read_enum_def (tree defn, tree maybe_template)
 
   if (installing)
     {
-      TYPE_VALUES (type) = values;
-      TYPE_MIN_VALUE (type) = min;
-      TYPE_MAX_VALUE (type) = max;
+      for (tree t = type; t; t = TYPE_NEXT_VARIANT (t))
+	{
+	  TYPE_VALUES (t) = values;
+	  TYPE_MIN_VALUE (t) = min;
+	  TYPE_MAX_VALUE (t) = max;
+	}
 
       rest_of_type_compilation (type, DECL_NAMESPACE_SCOPE_P (defn));
     }
