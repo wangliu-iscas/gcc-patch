@@ -1443,7 +1443,7 @@ merge_in_block (int max_reg, basic_block bb)
 
       /* Reload should handle auto-inc within a jump correctly, while LRA
 	 is known to have issues with autoinc.  */
-      if (JUMP_P (insn) && targetm.lra_p ())
+      if (JUMP_P (insn))
 	continue;
 
       if (dump_file)

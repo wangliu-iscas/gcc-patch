@@ -1664,7 +1664,7 @@ ira_init_once (void)
   ira_init_costs_once ();
   lra_init_once ();
 
-  ira_use_lra_p = targetm.lra_p ();
+  ira_use_lra_p = 1;
 }
 
 /* Free ira_max_register_move_cost, ira_may_move_in_cost and

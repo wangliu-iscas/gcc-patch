@@ -2026,7 +2026,7 @@ can_combine_p (rtx_insn *insn, rtx_insn *i3, rtx_insn *pred ATTRIBUTE_UNUSED,
   if (AUTO_INC_DEC)
     for (link = REG_NOTES (insn); link; link = XEXP (link, 1))
       if (REG_NOTE_KIND (link) == REG_INC
-	  && ((JUMP_P (i3) && targetm.lra_p ())
+	  && (JUMP_P (i3)
 	      || reg_used_between_p (XEXP (link, 0), insn, i3)
 	      || (pred != NULL_RTX
 		  && reg_overlap_mentioned_p (XEXP (link, 0), PATTERN (pred)))
