@@ -8106,6 +8106,7 @@ and,
     vec_perm_builder builder0;
     vec_perm_builder builder1;
     vec_perm_builder builder2 (nelts, nelts, 1);
+    bool ident_to_1 = true;
 
     if (!tree_to_vec_perm_builder (&builder0, @3)
 	|| !tree_to_vec_perm_builder (&builder1, @4))
@@ -8115,7 +8116,15 @@ and,
     vec_perm_indices sel1 (builder1, 1, nelts);
 
     for (int i = 0; i < nelts; i++)
-      builder2.quick_push (sel0[sel1[i].to_constant ()]);
+      {
+	 int tmp_index = sel0[sel1[i].to_constant ()].to_constant ();
+	 builder2.quick_push (sel0[sel1[i].to_constant ()]);
+	 if ( i != tmp_index)
+	  ident_to_1 = false;
+      }
+
+    if (ident_to_1)
+      return @1;
 
     vec_perm_indices sel2 (builder2, 2, nelts);
 
