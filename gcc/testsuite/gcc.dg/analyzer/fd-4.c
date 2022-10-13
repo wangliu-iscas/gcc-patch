@@ -12,11 +12,6 @@ int read (int fd, void *buf, int nbytes);
 #define O_WRONLY 1
 #define O_RDWR 2
 
-typedef enum {
-  S_IRWXU
-  // etc
-} mode_t;
-
 int creat (const char *, mode_t mode);
 
 void
