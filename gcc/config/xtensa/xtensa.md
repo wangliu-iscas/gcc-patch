@@ -1019,6 +1019,18 @@
 
 (define_split
   [(set (match_operand:SI 0 "register_operand")
+	(match_operand:SI 1 "const_int_operand"))]
+  "!TARGET_CONST16 && !TARGET_AUTO_LITPOOLS
+   && ! xtensa_split1_is_finished_p ()
+   && ! xtensa_simm12b (INTVAL (operands[1]))"
+  [(set (match_dup 0)
+	(match_dup 1))]
+{
+  operands[1] = force_const_mem (SImode, operands[1]);
+})
+
+(define_split
+  [(set (match_operand:SI 0 "register_operand")
 	(match_operand:SI 1 "constantpool_operand"))]
   "! optimize_debug && reload_completed"
   [(const_int 0)]

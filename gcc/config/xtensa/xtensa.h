@@ -242,10 +242,10 @@ along with GCC; see the file COPYING3.  If not see
 
    Proper values are computed in TARGET_CONDITIONAL_REGISTER_USAGE.  */
 
-#define CALL_USED_REGISTERS						\
+#define CALL_REALLY_USED_REGISTERS					\
 {									\
-  1, 1, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2,			\
-  1, 1, 1,								\
+  0, 0, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2,			\
+  0, 0, 1,								\
   1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,			\
   1,									\
 }
