@@ -27867,6 +27867,19 @@
 (define_int_attr vpmadd52type
   [(UNSPEC_VPMADD52LUQ "luq") (UNSPEC_VPMADD52HUQ "huq")])
 
+(define_insn "avx_vpmadd52<vpmadd52type>_<mode>"
+  [(set (match_operand:VI8_AVX2 0 "register_operand" "=x")
+	(unspec:VI8_AVX2
+	  [(match_operand:VI8_AVX2 1 "register_operand" "0")
+	   (match_operand:VI8_AVX2 2 "register_operand" "x")
+	   (match_operand:VI8_AVX2 3 "nonimmediate_operand" "xm")]
+	  VPMADD52))]
+  "TARGET_AVXIFMA"
+  "%{vex%} vpmadd52<vpmadd52type>\t{%3, %2, %0|%0, %2, %3}"
+  [(set_attr "type" "ssemuladd")
+   (set_attr "prefix" "vex")
+   (set_attr "mode" "<sseinsnmode>")])
+
 (define_expand "vpamdd52huq<mode>_maskz"
   [(match_operand:VI8_AVX512VL 0 "register_operand")
    (match_operand:VI8_AVX512VL 1 "register_operand")
@@ -27895,7 +27908,7 @@
   DONE;
 })
 
-(define_insn "vpamdd52<vpmadd52type><mode><sd_maskz_name>"
+(define_insn "vpamdd52<vpmadd52type><mode>"
   [(set (match_operand:VI8_AVX512VL 0 "register_operand" "=v")
 	(unspec:VI8_AVX512VL
 	  [(match_operand:VI8_AVX512VL 1 "register_operand" "0")
@@ -27903,7 +27916,32 @@
 	   (match_operand:VI8_AVX512VL 3 "nonimmediate_operand" "vm")]
 	  VPMADD52))]
   "TARGET_AVX512IFMA"
-  "vpmadd52<vpmadd52type>\t{%3, %2, %0<sd_mask_op4>|%0<sd_mask_op4>, %2, %3}"
+{
+  if (<MODE_SIZE> <=32
+     && TARGET_AVXIFMA
+     && !EXT_REX_SSE_REG_P (operands[1])
+     && !EXT_REX_SSE_REG_P (operands[2])
+     && !EXT_REX_SSE_REG_P (operands[3]))
+    return "%{vex%} vpmadd52<vpmadd52type>\t{%3, %2, %0|%0, %2, %3}";
+  else
+    return "vpmadd52<vpmadd52type>\t{%3, %2, %0|%0, %2, %3}";
+}
+  [(set_attr "type" "ssemuladd")
+   (set_attr "prefix" "maybe_evex")
+   (set_attr "mode" "<sseinsnmode>")])
+
+(define_insn "vpamdd52<vpmadd52type><mode>_maskz_1"
+  [(set (match_operand:VI8_AVX512VL 0 "register_operand" "=v")
+	(vec_merge:VI8_AVX512VL
+	  (unspec:VI8_AVX512VL
+	    [(match_operand:VI8_AVX512VL 1 "register_operand" "0")
+	     (match_operand:VI8_AVX512VL 2 "register_operand" "v")
+	     (match_operand:VI8_AVX512VL 3 "nonimmediate_operand" "vm")]
+	    VPMADD52)
+	  (match_operand:VI8_AVX512VL 4 "const0_operand" "C")
+	  (match_operand:<avx512fmaskmode> 5 "register_operand" "Yk")))]
+  "TARGET_AVX512IFMA"
+  "vpmadd52<vpmadd52type>\t{%3, %2, %0%{%5%}%{z%}|%0%{%5%}%{z%}, %2, %3}"
   [(set_attr "type" "ssemuladd")
    (set_attr "prefix" "evex")
    (set_attr "mode" "<sseinsnmode>")])
