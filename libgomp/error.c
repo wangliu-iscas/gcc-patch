@@ -77,7 +77,7 @@ void
 gomp_vfatal (const char *fmt, va_list list)
 {
   gomp_verror (fmt, list);
-  exit (EXIT_FAILURE);
+  abort ();
 }
 
 void
