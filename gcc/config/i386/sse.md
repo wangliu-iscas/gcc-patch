@@ -200,6 +200,13 @@
   UNSPEC_COMPLEX_FCMUL
   UNSPEC_COMPLEX_MASK
 
+  ;; For AVX-VNNI-INT8 support
+  UNSPEC_VPDPBSSD
+  UNSPEC_VPDPBSSDS
+  UNSPEC_VPDPBSUD
+  UNSPEC_VPDPBSUDS
+  UNSPEC_VPDPBUUD
+  UNSPEC_VPDPBUUDS
 ])
 
 (define_c_enum "unspecv" [
@@ -29241,3 +29248,27 @@
     gcc_unreachable ();
   DONE;
 })
+
+(define_int_iterator VPDOTPROD
+  [UNSPEC_VPDPBSSD
+   UNSPEC_VPDPBSSDS
+   UNSPEC_VPDPBSUD
+   UNSPEC_VPDPBSUDS
+   UNSPEC_VPDPBUUD
+   UNSPEC_VPDPBUUDS])
+
+(define_int_attr vpdotprodtype
+  [(UNSPEC_VPDPBSSD "bssd") (UNSPEC_VPDPBSSDS "bssds")
+   (UNSPEC_VPDPBSUD "bsud") (UNSPEC_VPDPBSUDS "bsuds")
+   (UNSPEC_VPDPBUUD "buud") (UNSPEC_VPDPBUUDS "buuds")])
+
+(define_insn "vpdp<vpdotprodtype>_<mode>"
+  [(set (match_operand:VI4_AVX 0 "register_operand" "=x")
+	(unspec:VI4_AVX
+	  [(match_operand:VI4_AVX 1 "register_operand" "0")
+	   (match_operand:VI4_AVX 2 "register_operand" "x")
+	   (match_operand:VI4_AVX 3 "nonimmediate_operand" "xm")]
+	  VPDOTPROD))]
+  "TARGET_AVXVNNIINT8"
+  "vpdp<vpdotprodtype>\t{%3, %2, %0|%0, %2, %3}"
+   [(set_attr "prefix" "vex")])
