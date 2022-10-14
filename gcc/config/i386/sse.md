@@ -171,6 +171,14 @@
   UNSPEC_VPMADDWDACCD
   UNSPEC_VPMADDWDACCSSD
 
+  ;; For AVXNECONVERT support
+  UNSPEC_VCVTNEBF16SF
+  UNSPEC_VCVTNESHSF
+  UNSPEC_VCVTNEEBF16SF
+  UNSPEC_VCVTNEEPHSF
+  UNSPEC_VCVTNEOBF16SF
+  UNSPEC_VCVTNEOPHSF
+
   ;; For VAES support
   UNSPEC_VAESDEC
   UNSPEC_VAESDECLAST
@@ -28930,9 +28938,69 @@
 ;; Converting from SF to BF
 (define_mode_attr sf_cvt_bf16
   [(V4SF  "V8HI") (V8SF  "V8HI") (V16SF  "V16HI")])
+(define_mode_attr sf_cvt_bfloat16
+  [(V4SF  "V8BF") (V8SF  "V8BF")])
 ;; Mapping from BF to SF
 (define_mode_attr sf_bf16
   [(V4SF  "V8HI") (V8SF  "V16HI") (V16SF  "V32HI")])
+(define_mode_attr sf_bfloat16
+  [(V4SF  "V8BF") (V8SF  "V16BF") (V16SF  "V32BF")])
+;; Mapping from PH to SF
+(define_mode_attr ph_cvt_sf
+  [(V4SF  "V8HF") (V8SF  "V16HF")])
+
+(define_int_iterator VBCSTNE
+  [UNSPEC_VCVTNEBF16SF
+   UNSPEC_VCVTNESHSF])
+
+(define_int_attr vbcstnetype
+  [(UNSPEC_VCVTNEBF16SF "bf16") (UNSPEC_VCVTNESHSF "sh")])
+
+(define_insn "vbcstne<vbcstnetype>2ps_<mode>"
+  [(set (match_operand:VF1_128_256 0 "register_operand" "=x")
+    (vec_duplicate:VF1_128_256
+     (unspec:SF
+      [(match_operand:HI 1 "memory_operand" "m")]
+      VBCSTNE)))]
+  "TARGET_AVXNECONVERT"
+  "vbcstne<vbcstnetype>2ps\t{%1, %0|%0, %1}"
+  [(set_attr "prefix" "vex")
+  (set_attr "mode" "<sseinsnmode>")])
+
+(define_int_iterator VCVTNEBF16
+  [UNSPEC_VCVTNEEBF16SF
+   UNSPEC_VCVTNEOBF16SF])
+
+(define_int_attr vcvtnebf16type
+  [(UNSPEC_VCVTNEEBF16SF "ebf16")
+   (UNSPEC_VCVTNEOBF16SF "obf16")])
+(define_insn "vcvtne<vcvtnebf16type>2ps_<mode>"
+  [(set (match_operand:VF1_128_256 0 "register_operand" "=x")
+    (unspec:VF1_128_256
+      [(match_operand:<sf_bfloat16> 1 "memory_operand" "m")]
+     VCVTNEBF16))]
+  "TARGET_AVXNECONVERT"
+  "vcvtne<vcvtnebf16type>2ps\t{%1, %0|%0, %1}"
+  [(set_attr "prefix" "vex")
+   (set_attr "mode" "<sseinsnmode>")])
+
+(define_int_iterator VCVTNEPH
+  [UNSPEC_VCVTNEEPHSF
+   UNSPEC_VCVTNEOPHSF])
+
+(define_int_attr vcvtnephtype
+  [(UNSPEC_VCVTNEEPHSF "eph")
+   (UNSPEC_VCVTNEOPHSF "oph")])
+
+(define_insn "vcvtne<vcvtnephtype>2ps_<mode>"
+  [(set (match_operand:VF1_128_256 0 "register_operand" "=x")
+    (unspec:VF1_128_256
+     [(match_operand:<ph_cvt_sf> 1 "memory_operand" "m")]
+   VCVTNEPH))]
+  "TARGET_AVXNECONVERT"
+  "vcvtne<vcvtnephtype>2ps\t{%1, %0|%0, %1}"
+  [(set_attr "prefix" "vex")
+   (set_attr "mode" "<sseinsnmode>")])
 
 (define_expand "avx512f_cvtne2ps2bf16_<mode>_maskz"
   [(match_operand:BF16 0 "register_operand")
@@ -28966,13 +29034,41 @@
   DONE;
 })
 
-(define_insn "avx512f_cvtneps2bf16_<mode><mask_name>"
+(define_insn "avx_vcvtneps2bf16_<mode>"
+  [(set (match_operand:<sf_cvt_bfloat16> 0 "register_operand" "=v")
+    (unspec:<sf_cvt_bfloat16>
+     [(match_operand:VF1_128_256 1 "register_operand" "v")]
+     UNSPEC_VCVTNEPS2BF16))]
+  "TARGET_AVXNECONVERT"
+  "%{vex%} vcvtneps2bf16\t{%1, %0|%0, %1}"
+  [(set_attr "prefix" "vex")])
+
+(define_insn "avx512f_cvtneps2bf16_<mode>"
   [(set (match_operand:<sf_cvt_bf16> 0 "register_operand" "=v")
 	(unspec:<sf_cvt_bf16>
 	  [(match_operand:VF1_AVX512VL 1 "register_operand" "v")]
         UNSPEC_VCVTNEPS2BF16))]
   "TARGET_AVX512BF16"
-  "vcvtneps2bf16\t{%1, %0<mask_operand2>|%0<mask_operand2>, %1}")
+  {
+    if (<MODE_SIZE> <=32
+	&& TARGET_AVXNECONVERT
+	&& !EXT_REX_SSE_REG_P (operands[0])
+	&& !EXT_REX_SSE_REG_P (operands[1]))
+      return "%{vex%} vcvtneps2bf16\t{%1, %0|%0, %1}";
+    else
+      return "vcvtneps2bf16\t{%1, %0|%0, %1}";
+  })
+
+(define_insn "avx512f_cvtneps2bf16_<mode>_mask"
+  [(set (match_operand:<sf_cvt_bf16> 0 "register_operand" "=v")
+    (vec_merge:<sf_cvt_bf16>
+      (unspec:<sf_cvt_bf16>
+	  [(match_operand:VF1_AVX512VL 1 "register_operand" "v")]
+	    UNSPEC_VCVTNEPS2BF16)
+      (match_operand:<sf_cvt_bf16> 2 "nonimm_or_0_operand" "0C")
+      (match_operand:<avx512fmaskmode> 3 "register_operand" "Yk")))]
+  "TARGET_AVX512BF16"
+  "vcvtneps2bf16\t{%1, %0%{%3%}%N2|%0%{%3%}%N2, %1}")
 
 (define_expand "avx512f_dpbf16ps_<mode>_maskz"
   [(match_operand:VF1_AVX512VL 0 "register_operand")
