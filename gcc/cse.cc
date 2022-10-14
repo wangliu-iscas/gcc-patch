@@ -5005,7 +5005,8 @@ cse_insn (rtx_insn *insn)
       if (targetm.const_anchor
 	  && !src_related
 	  && src_const
-	  && GET_CODE (src_const) == CONST_INT)
+	  && GET_CODE (src_const) == CONST_INT
+	  && SCALAR_INT_MODE_P (mode))
 	{
 	  src_related = try_const_anchors (src_const, mode);
 	  src_related_is_const_anchor = src_related != NULL_RTX;
