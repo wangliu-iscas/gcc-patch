@@ -1080,4 +1080,9 @@ extern void riscv_remove_unneeded_save_restore_calls (void);
 
 #define REGISTER_TARGET_PRAGMAS() riscv_register_pragmas ()
 
+/* We always have a "clear_cache" insn, which means __builtin__clear_cache will
+   never emit a call to __clear_cache.  */
+#undef CLEAR_INSN_CACHE
+#define CLEAR_INSN_CACHE(BEG, END) __builtin___clear_cache((BEG), (END));
+
 #endif /* ! GCC_RISCV_H */
