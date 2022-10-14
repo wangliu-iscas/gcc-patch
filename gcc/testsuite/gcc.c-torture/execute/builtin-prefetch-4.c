@@ -17,7 +17,7 @@ int
 assign_arg_ptr (int *p)
 {
   int *q;
-  __builtin_prefetch ((q = p), 0, 0);
+  __builtin_prefetch ((q = p), 0, 0, 1);
   return q == p;
 }
 
@@ -25,7 +25,7 @@ int
 assign_glob_ptr (void)
 {
   int *q;
-  __builtin_prefetch ((q = ptr), 0, 0);
+  __builtin_prefetch ((q = ptr), 0, 0, 1);
   return q == ptr;
 }
 
@@ -33,7 +33,7 @@ int
 assign_arg_idx (int *p, int i)
 {
   int j;
-  __builtin_prefetch (&p[j = i], 0, 0);
+  __builtin_prefetch (&p[j = i], 0, 0, 1);
   return j == i;
 }
 
@@ -41,7 +41,7 @@ int
 assign_glob_idx (void)
 {
   int j;
-  __builtin_prefetch (&ptr[j = arrindex], 0, 0);
+  __builtin_prefetch (&ptr[j = arrindex], 0, 0, 1);
   return j == arrindex;
 }
 
@@ -53,7 +53,7 @@ preinc_arg_ptr (int *p)
 {
   int *q;
   q = p + 1;
-  __builtin_prefetch (++p, 0, 0);
+  __builtin_prefetch (++p, 0, 0, 1);
   return p == q;
 }
 
@@ -62,7 +62,7 @@ preinc_glob_ptr (void)
 {
   int *q;
   q = ptr + 1;
-  __builtin_prefetch (++ptr, 0, 0);
+  __builtin_prefetch (++ptr, 0, 0, 1);
   return ptr == q;
 }
 
@@ -71,7 +71,7 @@ postinc_arg_ptr (int *p)
 {
   int *q;
   q = p + 1;
-  __builtin_prefetch (p++, 0, 0);
+  __builtin_prefetch (p++, 0, 0, 1);
   return p == q;
 }
 
@@ -80,7 +80,7 @@ postinc_glob_ptr (void)
 {
   int *q;
   q = ptr + 1;
-  __builtin_prefetch (ptr++, 0, 0);
+  __builtin_prefetch (ptr++, 0, 0, 1);
   return ptr == q;
 }
 
@@ -89,7 +89,7 @@ predec_arg_ptr (int *p)
 {
   int *q;
   q = p - 1;
-  __builtin_prefetch (--p, 0, 0);
+  __builtin_prefetch (--p, 0, 0, 1);
   return p == q;
 }
 
@@ -98,7 +98,7 @@ predec_glob_ptr (void)
 {
   int *q;
   q = ptr - 1;
-  __builtin_prefetch (--ptr, 0, 0);
+  __builtin_prefetch (--ptr, 0, 0, 1);
   return ptr == q;
 }
 
@@ -107,7 +107,7 @@ postdec_arg_ptr (int *p)
 {
   int *q;
   q = p - 1;
-  __builtin_prefetch (p--, 0, 0);
+  __builtin_prefetch (p--, 0, 0, 1);
   return p == q;
 }
 
@@ -116,7 +116,7 @@ postdec_glob_ptr (void)
 {
   int *q;
   q = ptr - 1;
-  __builtin_prefetch (ptr--, 0, 0);
+  __builtin_prefetch (ptr--, 0, 0, 1);
   return ptr == q;
 }
 
@@ -124,7 +124,7 @@ int
 preinc_arg_idx (int *p, int i)
 {
   int j = i + 1;
-  __builtin_prefetch (&p[++i], 0, 0);
+  __builtin_prefetch (&p[++i], 0, 0, 1);
   return i == j;
 }
 
@@ -133,7 +133,7 @@ int
 preinc_glob_idx (void)
 {
   int j = arrindex + 1;
-  __builtin_prefetch (&ptr[++arrindex], 0, 0);
+  __builtin_prefetch (&ptr[++arrindex], 0, 0, 1);
   return arrindex == j;
 }
 
@@ -141,7 +141,7 @@ int
 postinc_arg_idx (int *p, int i)
 {
   int j = i + 1;
-  __builtin_prefetch (&p[i++], 0, 0);
+  __builtin_prefetch (&p[i++], 0, 0, 1);
   return i == j;
 }
 
@@ -149,7 +149,7 @@ int
 postinc_glob_idx (void)
 {
   int j = arrindex + 1;
-  __builtin_prefetch (&ptr[arrindex++], 0, 0);
+  __builtin_prefetch (&ptr[arrindex++], 0, 0, 1);
   return arrindex == j;
 }
 
@@ -157,7 +157,7 @@ int
 predec_arg_idx (int *p, int i)
 {
   int j = i - 1;
-  __builtin_prefetch (&p[--i], 0, 0);
+  __builtin_prefetch (&p[--i], 0, 0, 1);
   return i == j;
 }
 
@@ -165,7 +165,7 @@ int
 predec_glob_idx (void)
 {
   int j = arrindex - 1;
-  __builtin_prefetch (&ptr[--arrindex], 0, 0);
+  __builtin_prefetch (&ptr[--arrindex], 0, 0, 1);
   return arrindex == j;
 }
 
@@ -173,7 +173,7 @@ int
 postdec_arg_idx (int *p, int i)
 {
   int j = i - 1;
-  __builtin_prefetch (&p[i--], 0, 0);
+  __builtin_prefetch (&p[i--], 0, 0, 1);
   return i == j;
 }
 
@@ -181,7 +181,7 @@ int
 postdec_glob_idx (void)
 {
   int j = arrindex - 1;
-  __builtin_prefetch (&ptr[arrindex--], 0, 0);
+  __builtin_prefetch (&ptr[arrindex--], 0, 0, 1);
   return arrindex == j;
 }
 
@@ -200,7 +200,7 @@ getptr (int *p)
 int
 funccall_arg_ptr (int *p)
 {
-  __builtin_prefetch (getptr (p), 0, 0);
+  __builtin_prefetch (getptr (p), 0, 0, 1);
   return getptrcnt == 1;
 }
 
@@ -216,7 +216,7 @@ getint (int i)
 int
 funccall_arg_idx (int *p, int i)
 {
-  __builtin_prefetch (&p[getint (i)], 0, 0);
+  __builtin_prefetch (&p[getint (i)], 0, 0, 1);
   return getintcnt == 1;
 }
 

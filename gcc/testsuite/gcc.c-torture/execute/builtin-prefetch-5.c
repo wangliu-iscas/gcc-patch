@@ -18,32 +18,32 @@ int idx = 3;
 void
 arg_ptr (char *p)
 {
-  __builtin_prefetch (p, 0, 0);
+  __builtin_prefetch (p, 0, 0, 1);
 }
 
 void
 arg_idx (char *p, int i)
 {
-  __builtin_prefetch (&p[i], 0, 0);
+  __builtin_prefetch (&p[i], 0, 0, 1);
 }
 
 void
 glob_ptr (void)
 {
-  __builtin_prefetch (ptr, 0, 0);
+  __builtin_prefetch (ptr, 0, 0, 1);
 }
 
 void
 glob_idx (void)
 {
-  __builtin_prefetch (&ptr[idx], 0, 0);
+  __builtin_prefetch (&ptr[idx], 0, 0, 1);
 }
 
 int
 main ()
 {
-  __builtin_prefetch (&s.b, 0, 0);
-  __builtin_prefetch (&s.c[1], 0, 0);
+  __builtin_prefetch (&s.b, 0, 0, 1);
+  __builtin_prefetch (&s.c[1], 0, 0, 1);
 
   arg_ptr (&s.c[1]);
   arg_ptr (ptr+3);

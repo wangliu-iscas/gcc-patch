@@ -25,7 +25,7 @@ prefetch_for_read (void)
 {
   int i;
   for (i = 0; i < ARRSIZE; i++)
-    __builtin_prefetch (bad_addr[i], 0, 0);
+    __builtin_prefetch (bad_addr[i], 0, 0, 1);
 }
 
 void
@@ -33,7 +33,7 @@ prefetch_for_write (void)
 {
   int i;
   for (i = 0; i < ARRSIZE; i++)
-    __builtin_prefetch (bad_addr[i], 1, 0);
+    __builtin_prefetch (bad_addr[i], 1, 0, 1);
 }
 
 int
