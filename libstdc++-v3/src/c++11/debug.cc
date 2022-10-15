@@ -609,6 +609,7 @@ namespace
     print_literal(PrintContext& ctx, const char(&word)[Length])
     { print_word(ctx, word, Length - 1); }
 
+#if _GLIBCXX_HAVE_STACKTRACE
   void
   print_raw(PrintContext& ctx, const char* str, ptrdiff_t nbc)
   {
@@ -616,6 +617,7 @@ namespace
       nbc = INT_MAX;
     ctx._M_column += fprintf(stderr, "%.*s", (int)nbc, str);
   }
+#endif
 
   void
   print_word(PrintContext& ctx, const char* word, ptrdiff_t nbc = -1)
