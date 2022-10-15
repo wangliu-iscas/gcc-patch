@@ -576,8 +576,8 @@ ctf_add_array (ctf_container_ref ctfc, uint32_t flag, const ctf_arinfo_t * arp,
 }
 
 ctf_id_t
-ctf_add_enum (ctf_container_ref ctfc, uint32_t flag, const char * name,
-	      HOST_WIDE_INT size, dw_die_ref die)
+ctf_add_enum (ctf_container_ref ctfc, uint32_t flag,
+	      const ctf_enum_binfo_t *ei, dw_die_ref die)
 {
   ctf_dtdef_ref dtd;
   ctf_id_t type;
@@ -595,16 +595,16 @@ ctf_add_enum (ctf_container_ref ctfc, uint32_t flag, const char * name,
 	= CTF_TYPE_INFO (CTF_K_FORWARD, CTF_ADD_NONROOT, 0);
     }
 
-  type = ctf_add_generic (ctfc, flag, name, &dtd, die);
+  type = ctf_add_generic (ctfc, flag, ei->ei_name, &dtd, die);
 
   dtd->dtd_data.ctti_info = CTF_TYPE_INFO (CTF_K_ENUM, flag, 0);
 
   /* Size in bytes should always fit, of course.
      TBD WARN - warn instead?  */
-  gcc_assert (size <= CTF_MAX_SIZE);
+  gcc_assert (ei->ei_size <= CTF_MAX_SIZE);
 
-  dtd->dtd_data.ctti_size = size;
-
+  dtd->dtd_data.ctti_size = ei->ei_size;
+  dtd->dtd_enum_unsigned = ei->ei_unsigned;
   ctfc->ctfc_num_stypes++;
 
   return type;
@@ -630,10 +630,12 @@ ctf_add_enumerator (ctf_container_ref ctfc, ctf_id_t enid, const char * name,
 
   gcc_assert (kind == CTF_K_ENUM && vlen < CTF_MAX_VLEN);
 
-  /* Enum value is of type HOST_WIDE_INT in the compiler, dmd_value is int32_t
-     on the other hand.  Check bounds and skip adding this enum value if out of
-     bounds.  */
-  if ((value > INT_MAX) || (value < INT_MIN))
+  /* Enum value is of type HOST_WIDE_INT in the compiler, CTF enumerators
+     values in ctf_enum_t is limited to int32_t, BTF supports signed and
+     unsigned enumerators values of 32 and 64 bits, for both debug formats
+     we use ctf_dmdef_t.dmd_value entry of HOST_WIDE_INT type. So check
+     CTF bounds and skip adding this enum value if out of bounds.  */
+  if (!btf_debuginfo_p() && ((value > INT_MAX) || (value < INT_MIN)))
     {
       /* FIXME - Note this TBD_CTF_REPRESENTATION_LIMIT.  */
       return (1);

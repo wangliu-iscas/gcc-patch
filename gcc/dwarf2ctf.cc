@@ -736,6 +736,7 @@ gen_ctf_enumeration_type (ctf_container_ref ctfc, dw_die_ref enumeration)
 {
   const char *enum_name = get_AT_string (enumeration, DW_AT_name);
   unsigned int bit_size = ctf_die_bitsize (enumeration);
+  unsigned int signedness = get_AT_unsigned (enumeration, DW_AT_encoding);
   int declaration_p = get_AT_flag (enumeration, DW_AT_declaration);
 
   ctf_id_t enumeration_type_id;
@@ -757,9 +758,14 @@ gen_ctf_enumeration_type (ctf_container_ref ctfc, dw_die_ref enumeration)
       bit_size = ctf_die_bitsize (type);
     }
 
+  ctf_enum_binfo_t ei;
+  ei.ei_name = enum_name;
+  ei.ei_size = bit_size / 8;
+  ei.ei_unsigned = (signedness == DW_ATE_unsigned);
+
   /* Generate a CTF type for the enumeration.  */
   enumeration_type_id = ctf_add_enum (ctfc, CTF_ADD_ROOT,
-				      enum_name, bit_size / 8, enumeration);
+				      &ei, enumeration);
 
   /* Process the enumerators.  */
   {
