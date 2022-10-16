@@ -453,10 +453,17 @@ rtx_writer::print_rtx_operand_code_i (const_rtx in_rtx, int idx)
 	  expanded_location xloc = insn_location (in_insn);
 	  fprintf (m_outfile, " \"%s\":%i:%i", xloc.file, xloc.line,
 		   xloc.column);
-	  int discriminator = insn_discriminator (in_insn);
-	    if (discriminator)
-	      fprintf (m_outfile, " discrim %d", discriminator);
 
+	  /* Don't print discriminators for -fcompare-debug since the IR
+	     coming from the front end may be different with and without
+	     debug information turned on. That may result in different
+	     discriminator values. */
+	  if (!(dump_flags & TDF_COMPARE_DEBUG))
+	    {
+	      int discriminator = insn_discriminator (in_insn);
+	      if (discriminator)
+		fprintf (m_outfile, " discrim %d", discriminator);
+	    }
 	}
 #endif
     }
