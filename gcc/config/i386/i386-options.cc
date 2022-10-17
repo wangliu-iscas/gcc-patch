@@ -1123,6 +1123,15 @@ ix86_valid_target_attribute_inner_p (tree fndecl, tree args, char *p_strings[],
     = fndecl == NULL ? UNKNOWN_LOCATION : DECL_SOURCE_LOCATION (fndecl);
   const char *attr_name = target_clone_attr ? "target_clone" : "target";
 
+  args = tree_strip_nop_conversions (args);
+
+  if (TREE_CODE (args) == ADDR_EXPR)
+    {
+      /* Attribute string is given by a constexpr function or conditional
+	 expression.  Dereference ADDR_EXPR, operand should be a STRING_CST.  */
+      args = TREE_OPERAND (args, 0);
+    }
+
   /* If this is a list, recurse to get the options.  */
   if (TREE_CODE (args) == TREE_LIST)
     {
