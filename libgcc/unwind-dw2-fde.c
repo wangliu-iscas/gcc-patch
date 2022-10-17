@@ -333,8 +333,10 @@ base_from_object (unsigned char encoding, const struct object *ob)
 /* Return the FDE pointer encoding from the CIE.  */
 /* ??? This is a subset of extract_cie_info from unwind-dw2.c.  */
 
-static int
-get_cie_encoding (const struct dwarf_cie *cie)
+/* Disable inlining because the function is only used as a slow path in
+   get_cie_encoding below.  */
+static int __attribute__ ((noinline))
+get_cie_encoding_slow (const struct dwarf_cie *cie)
 {
   const unsigned char *aug, *p;
   _Unwind_Ptr dummy;
@@ -387,6 +389,61 @@ get_cie_encoding (const struct dwarf_cie *cie)
 	return DW_EH_PE_absptr;
       aug++;
     }
+}
+
+static inline int
+get_cie_encoding (const struct dwarf_cie *cie)
+{
+  /* Fast path for some augmentations and single-byte variable-length
+     integers.  Do this only for targets that align struct dwarf_cie to 8
+     bytes, which ensures that at least 8 bytes are available starting at
+     cie->version.  */
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ \
+  || __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  if (__alignof (*cie) == 8 && sizeof (unsigned long long) == 8)
+    {
+      unsigned long long value = *(const unsigned long long *) &cie->version;
+
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define C(x) __builtin_bswap64 (x)
+#else
+#define C(x) x
+#endif
+
+      /* Fast path for "zR".  Check for version 1, the "zR" string and that
+	 the sleb128/uleb128 values are single bytes.  In the comments
+	 below, '1', 'c', 'd', 'r', 'l' are version, code alignment, data
+	 alignment, return address column, augmentation length.  Note that
+	 with CIE version 1, the return address column is byte-encoded.  */
+      unsigned long long expected =
+	/*   1 z R 0 c d r l.  */
+	C (0x017a520000000000ULL);
+      unsigned long long mask =
+	/*   1 z R 0 c d r l.  */
+	C (0xffffffff80800080ULL);
+
+      if ((value & mask) == expected)
+	return cie->augmentation[7];
+
+      /* Fast path for "zPLR".  */
+      expected =
+	/*   1 z P L R 0 c d.  */
+	C (0x017a504c52000000ULL);
+      mask =
+	/*   1 z P L R 0 c d.  */
+	C (0xffffffffffff8080ULL);
+#undef C
+
+      /* Validate the augmentation length, and return the enconding after
+	 it.  No check for the return address column because it is
+	 byte-encoded with CIE version 1.  */
+      if (__builtin_expect ((value & mask) == expected
+			    && (cie->augmentation[8] & 0x80) == 0, 1))
+	  return cie->augmentation[9];
+    }
+#endif
+
+  return get_cie_encoding_slow (cie);
 }
 
 static inline int
