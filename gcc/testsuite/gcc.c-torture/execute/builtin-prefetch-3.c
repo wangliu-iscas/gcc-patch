@@ -36,11 +36,11 @@ volatile struct S * volatile vol_ptr_vol_str = &vol_str;
 void
 simple_vol_global ()
 {
-  __builtin_prefetch (glob_vol_int_arr, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_int, 0, 0);
-  __builtin_prefetch (glob_ptr_vol_int, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0);
-  __builtin_prefetch (&glob_vol_int, 0, 0);
+  __builtin_prefetch (glob_vol_int_arr, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_int, 0, 0, 1);
+  __builtin_prefetch (glob_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (&glob_vol_int, 0, 0, 1);
 }
 
 /* Prefetch volatile static variables using the address of the variable.  */
@@ -48,11 +48,11 @@ simple_vol_global ()
 void
 simple_vol_file ()
 {
-  __builtin_prefetch (stat_vol_int_arr, 0, 0);
-  __builtin_prefetch (stat_vol_ptr_int, 0, 0);
-  __builtin_prefetch (stat_ptr_vol_int, 0, 0);
-  __builtin_prefetch (stat_vol_ptr_vol_int, 0, 0);
-  __builtin_prefetch (&stat_vol_int, 0, 0);
+  __builtin_prefetch (stat_vol_int_arr, 0, 0, 1);
+  __builtin_prefetch (stat_vol_ptr_int, 0, 0, 1);
+  __builtin_prefetch (stat_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (stat_vol_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (&stat_vol_int, 0, 0, 1);
 }
 
 /* Prefetch using address expressions involving volatile global variables.  */
@@ -60,43 +60,43 @@ simple_vol_file ()
 void
 expr_vol_global (void)
 {
-  __builtin_prefetch (&vol_str, 0, 0);
-  __builtin_prefetch (ptr_vol_str, 0, 0);
-  __builtin_prefetch (vol_ptr_str, 0, 0);
-  __builtin_prefetch (vol_ptr_vol_str, 0, 0);
-  __builtin_prefetch (&vol_str.b, 0, 0);
-  __builtin_prefetch (&ptr_vol_str->b, 0, 0);
-  __builtin_prefetch (&vol_ptr_str->b, 0, 0);
-  __builtin_prefetch (&vol_ptr_vol_str->b, 0, 0);
-  __builtin_prefetch (&vol_str.d, 0, 0);
-  __builtin_prefetch (&vol_ptr_str->d, 0, 0);
-  __builtin_prefetch (&ptr_vol_str->d, 0, 0);
-  __builtin_prefetch (&vol_ptr_vol_str->d, 0, 0);
-  __builtin_prefetch (vol_str.next, 0, 0);
-  __builtin_prefetch (vol_ptr_str->next, 0, 0);
-  __builtin_prefetch (ptr_vol_str->next, 0, 0);
-  __builtin_prefetch (vol_ptr_vol_str->next, 0, 0);
-  __builtin_prefetch (vol_str.next->d, 0, 0);
-  __builtin_prefetch (vol_ptr_str->next->d, 0, 0);
-  __builtin_prefetch (ptr_vol_str->next->d, 0, 0);
-  __builtin_prefetch (vol_ptr_vol_str->next->d, 0, 0);
+  __builtin_prefetch (&vol_str, 0, 0, 1);
+  __builtin_prefetch (ptr_vol_str, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_str, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_vol_str, 0, 0, 1);
+  __builtin_prefetch (&vol_str.b, 0, 0, 1);
+  __builtin_prefetch (&ptr_vol_str->b, 0, 0, 1);
+  __builtin_prefetch (&vol_ptr_str->b, 0, 0, 1);
+  __builtin_prefetch (&vol_ptr_vol_str->b, 0, 0, 1);
+  __builtin_prefetch (&vol_str.d, 0, 0, 1);
+  __builtin_prefetch (&vol_ptr_str->d, 0, 0, 1);
+  __builtin_prefetch (&ptr_vol_str->d, 0, 0, 1);
+  __builtin_prefetch (&vol_ptr_vol_str->d, 0, 0, 1);
+  __builtin_prefetch (vol_str.next, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_str->next, 0, 0, 1);
+  __builtin_prefetch (ptr_vol_str->next, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_vol_str->next, 0, 0, 1);
+  __builtin_prefetch (vol_str.next->d, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_str->next->d, 0, 0, 1);
+  __builtin_prefetch (ptr_vol_str->next->d, 0, 0, 1);
+  __builtin_prefetch (vol_ptr_vol_str->next->d, 0, 0, 1);
 
-  __builtin_prefetch (&glob_vol_int_arr, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_int, 0, 0);
-  __builtin_prefetch (glob_ptr_vol_int, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0);
-  __builtin_prefetch (&glob_vol_int_arr[2], 0, 0);
-  __builtin_prefetch (&glob_vol_ptr_int[3], 0, 0);
-  __builtin_prefetch (&glob_ptr_vol_int[3], 0, 0);
-  __builtin_prefetch (&glob_vol_ptr_vol_int[3], 0, 0);
-  __builtin_prefetch (glob_vol_int_arr+3, 0, 0);
-  __builtin_prefetch (glob_vol_int_arr+glob_vol_int, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_int+5, 0, 0);
-  __builtin_prefetch (glob_ptr_vol_int+5, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_vol_int+5, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_int+glob_vol_int, 0, 0);
-  __builtin_prefetch (glob_ptr_vol_int+glob_vol_int, 0, 0);
-  __builtin_prefetch (glob_vol_ptr_vol_int+glob_vol_int, 0, 0);
+  __builtin_prefetch (&glob_vol_int_arr, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_int, 0, 0, 1);
+  __builtin_prefetch (glob_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_vol_int, 0, 0, 1);
+  __builtin_prefetch (&glob_vol_int_arr[2], 0, 0, 1);
+  __builtin_prefetch (&glob_vol_ptr_int[3], 0, 0, 1);
+  __builtin_prefetch (&glob_ptr_vol_int[3], 0, 0, 1);
+  __builtin_prefetch (&glob_vol_ptr_vol_int[3], 0, 0, 1);
+  __builtin_prefetch (glob_vol_int_arr+3, 0, 0, 1);
+  __builtin_prefetch (glob_vol_int_arr+glob_vol_int, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_int+5, 0, 0, 1);
+  __builtin_prefetch (glob_ptr_vol_int+5, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_vol_int+5, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_int+glob_vol_int, 0, 0, 1);
+  __builtin_prefetch (glob_ptr_vol_int+glob_vol_int, 0, 0, 1);
+  __builtin_prefetch (glob_vol_ptr_vol_int+glob_vol_int, 0, 0, 1);
 }
 
 int
