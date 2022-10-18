@@ -2404,8 +2404,9 @@ static vec<tree, va_heap, vl_embed> *doacross_steps;
 
 static void
 gfc_trans_omp_array_section (stmtblock_t *block, gfc_omp_namelist *n,
-			     tree decl, bool element, gomp_map_kind ptr_kind,
-			     tree &node, tree &node2, tree &node3, tree &node4)
+			     tree decl, bool element, bool openmp,
+			     gomp_map_kind ptr_kind, tree &node, tree &node2,
+			     tree &node3, tree &node4)
 {
   gfc_se se;
   tree ptr, ptr2;
@@ -2497,7 +2498,7 @@ gfc_trans_omp_array_section (stmtblock_t *block, gfc_omp_namelist *n,
 	 struct – and adding an 'alloc: for the 'desc.data' pointer, which
 	 would break as the 'desc' (the descriptor) is also mapped
 	 (see node4 above).  */
-      if (ptr_kind == GOMP_MAP_ATTACH_DETACH)
+      if (ptr_kind == GOMP_MAP_ATTACH_DETACH && !openmp)
 	STRIP_NOPS (OMP_CLAUSE_DECL (node3));
     }
   else
@@ -2515,7 +2516,7 @@ gfc_trans_omp_array_section (stmtblock_t *block, gfc_omp_namelist *n,
 			       decl, offset, NULL_TREE, NULL_TREE);
 	  OMP_CLAUSE_DECL (node) = offset;
 
-	  if (ptr_kind == GOMP_MAP_ALWAYS_POINTER)
+	  if (ptr_kind == GOMP_MAP_ATTACH_DETACH && openmp)
 	    return;
 	}
       else
@@ -3353,8 +3354,9 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 		      && !(POINTER_TYPE_P (type)
 			   && GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (type))))
 		    k = GOMP_MAP_FIRSTPRIVATE_POINTER;
-		  gfc_trans_omp_array_section (block, n, decl, element, k,
-					       node, node2, node3, node4);
+		  gfc_trans_omp_array_section (block, n, decl, element,
+					       !openacc, k, node, node2,
+					       node3, node4);
 		}
 	      else if (n->expr
 		       && n->expr->expr_type == EXPR_VARIABLE
@@ -3380,10 +3382,7 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 		    {
 		      node2 = build_omp_clause (input_location,
 						OMP_CLAUSE_MAP);
-		      gomp_map_kind kind
-			= (openacc ? GOMP_MAP_ATTACH_DETACH
-				   : GOMP_MAP_ALWAYS_POINTER);
-		      OMP_CLAUSE_SET_MAP_KIND (node2, kind);
+		      OMP_CLAUSE_SET_MAP_KIND (node2, GOMP_MAP_ATTACH_DETACH);
 		      OMP_CLAUSE_DECL (node2)
 			= POINTER_TYPE_P (TREE_TYPE (se.expr))
 			  ? se.expr
@@ -3468,9 +3467,7 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 			  node2 = build_omp_clause (input_location,
 						    OMP_CLAUSE_MAP);
 			  OMP_CLAUSE_SET_MAP_KIND (node2,
-						   openacc
-						   ? GOMP_MAP_ATTACH_DETACH
-						   : GOMP_MAP_ALWAYS_POINTER);
+						   GOMP_MAP_ATTACH_DETACH);
 			  OMP_CLAUSE_DECL (node2) = build_fold_addr_expr (data);
 			  OMP_CLAUSE_SIZE (node2) = size_int (0);
 			}
@@ -3555,9 +3552,7 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 			  node3 = build_omp_clause (input_location,
 						    OMP_CLAUSE_MAP);
 			  OMP_CLAUSE_SET_MAP_KIND (node3,
-						   openacc
-						   ? GOMP_MAP_ATTACH_DETACH
-						   : GOMP_MAP_ALWAYS_POINTER);
+						   GOMP_MAP_ATTACH_DETACH);
 			  OMP_CLAUSE_DECL (node3)
 			    = gfc_conv_descriptor_data_get (inner);
 			  /* Similar to gfc_trans_omp_array_section (details
@@ -3580,11 +3575,10 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 		    {
 		      /* An array element or section.  */
 		      bool element = lastref->u.ar.type == AR_ELEMENT;
-		      gomp_map_kind kind = (openacc ? GOMP_MAP_ATTACH_DETACH
-						    : GOMP_MAP_ALWAYS_POINTER);
+		      gomp_map_kind kind = GOMP_MAP_ATTACH_DETACH;
 		      gfc_trans_omp_array_section (block, n, inner, element,
-						   kind, node, node2, node3,
-						   node4);
+						   !openacc, kind, node, node2,
+						   node3, node4);
 		    }
 		  else
 		    gcc_unreachable ();
