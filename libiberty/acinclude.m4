@@ -24,6 +24,7 @@ AC_CACHE_CHECK([for working strncmp], ac_cv_func_strncmp_works,
 [AC_TRY_RUN([
 /* Test by Jim Wilson and Kaveh Ghazi.
    Check whether strncmp reads past the end of its string parameters. */
+#include <string.h>
 #include <sys/types.h>
 
 #ifdef HAVE_FCNTL_H
@@ -51,7 +52,8 @@ AC_CACHE_CHECK([for working strncmp], ac_cv_func_strncmp_works,
 
 #define MAP_LEN 0x10000
 
-main ()
+int
+main (void)
 {
 #if defined(HAVE_MMAP) || defined(HAVE_MMAP_ANYWHERE)
   char *p;
@@ -59,7 +61,7 @@ main ()
 
   dev_zero = open ("/dev/zero", O_RDONLY);
   if (dev_zero < 0)
-    exit (1);
+    return 1;
 
   p = (char *) mmap (0, MAP_LEN, PROT_READ|PROT_WRITE,
 		     MAP_ANON|MAP_PRIVATE, dev_zero, 0);
@@ -67,7 +69,7 @@ main ()
     p = (char *) mmap (0, MAP_LEN, PROT_READ|PROT_WRITE,
 		       MAP_ANON|MAP_PRIVATE, -1, 0);
   if (p == (char *)-1)
-    exit (2);
+    return 2;
   else
     {
       char *string = "__si_type_info";
@@ -79,7 +81,7 @@ main ()
       strncmp (r, q, 14);
     }
 #endif /* HAVE_MMAP || HAVE_MMAP_ANYWHERE */
-  exit (0);
+  return 0;
 }
 ], ac_cv_func_strncmp_works=yes, ac_cv_func_strncmp_works=no,
   ac_cv_func_strncmp_works=yes)
@@ -171,7 +173,7 @@ AC_CACHE_CHECK(stack direction for C alloca, ac_cv_c_stack_direction,
 }
 main ()
 {
-  exit (find_stack_direction() < 0);
+  return find_stack_direction() < 0;
 }],
   ac_cv_c_stack_direction=1,
   ac_cv_c_stack_direction=-1,
