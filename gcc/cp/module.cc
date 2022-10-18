@@ -11443,7 +11443,8 @@ has_definition (tree decl)
 	if (type == TYPE_MAIN_VARIANT (type)
 	    && decl == TYPE_NAME (type)
 	    && (TREE_CODE (type) == ENUMERAL_TYPE
-		? TYPE_VALUES (type) : TYPE_FIELDS (type)))
+		? !OPAQUE_ENUM_P (type)
+		: TYPE_FIELDS (type) != NULL_TREE))
 	  return true;
       }
       break;
