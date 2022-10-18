@@ -100,8 +100,8 @@ void f()
 
   A a;
 
-  (A)(a);                     // { dg-warning "3:useless cast" }
-  static_cast<A>(a);          // { dg-warning "3:useless cast" }
+  (A)(a);
+  static_cast<A>(a);
 
   (A*)(&a);                   // { dg-warning "3:useless cast" }
   const_cast<A*>(&a);         // { dg-warning "3:useless cast" }
