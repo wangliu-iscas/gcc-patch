@@ -9649,12 +9649,31 @@ omp_tsort_mapping_groups (vec<omp_mapping_group> *groups,
 {
   omp_mapping_group *grp, *outlist = NULL, **cursor;
   unsigned int i;
+  bool saw_runtime_implicit = false;
 
   cursor = &outlist;
 
   FOR_EACH_VEC_ELT (*groups, i, grp)
     {
       if (grp->mark != PERMANENT)
+	{
+	  if (OMP_CLAUSE_MAP_RUNTIME_IMPLICIT_P (*grp->grp_start))
+	    {
+	      saw_runtime_implicit = true;
+	      continue;
+	    }
+	  if (!omp_tsort_mapping_groups_1 (&cursor, groups, grpmap, grp))
+	    return NULL;
+	}
+    }
+
+  if (!saw_runtime_implicit)
+    return outlist;
+
+  FOR_EACH_VEC_ELT (*groups, i, grp)
+    {
+      if (grp->mark != PERMANENT
+	  && OMP_CLAUSE_MAP_RUNTIME_IMPLICIT_P (*grp->grp_start))
 	if (!omp_tsort_mapping_groups_1 (&cursor, groups, grpmap, grp))
 	  return NULL;
     }
@@ -10666,11 +10685,19 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
      for the purposes of gathering sibling lists, etc.  */
   /* gcc_assert (base == addr_tokens[base_token]->expr);  */
 
-  bool ptr = (OMP_CLAUSE_MAP_KIND (grp_end) == GOMP_MAP_ALWAYS_POINTER);
   bool attach_detach = ((OMP_CLAUSE_MAP_KIND (grp_end)
 			 == GOMP_MAP_ATTACH_DETACH)
 			|| (OMP_CLAUSE_MAP_KIND (grp_end)
 			    == GOMP_MAP_ATTACH_ZERO_LENGTH_ARRAY_SECTION));
+  bool has_descriptor = false;
+  if (OMP_CLAUSE_CHAIN (*grp_start_p) != grp_end)
+    {
+      tree grp_mid = OMP_CLAUSE_CHAIN (*grp_start_p);
+      if (grp_mid
+	  && OMP_CLAUSE_CODE (grp_mid) == OMP_CLAUSE_MAP
+	  && OMP_CLAUSE_MAP_KIND (grp_mid) == GOMP_MAP_TO_PSET)
+	has_descriptor = true;
+    }
 
   if (!struct_map_to_clause || struct_map_to_clause->get (base) == NULL)
     {
@@ -10693,7 +10720,16 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
 	 GOMP_MAP_STRUCT into the middle of the old one.  */
       tree *insert_node_pos = reprocessing_struct ? *added_tail : grp_start_p;
 
-      if (ptr || attach_detach)
+      if (has_descriptor)
+	{
+	  tree desc = OMP_CLAUSE_CHAIN (*grp_start_p);
+	  tree sc = *insert_node_pos;
+	  OMP_CLAUSE_CHAIN (l) = desc;
+	  OMP_CLAUSE_CHAIN (*grp_start_p) = OMP_CLAUSE_CHAIN (desc);
+	  OMP_CLAUSE_CHAIN (desc) = sc;
+	  *insert_node_pos = l;
+	}
+      else if (attach_detach)
 	{
 	  tree extra_node;
 	  tree alloc_node
@@ -10923,7 +10959,7 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
 	  || OMP_CLAUSE_MAP_KIND (*sc) == GOMP_MAP_ATTACH_DETACH)
 	sc = &OMP_CLAUSE_CHAIN (*sc);
       for (i = 0; i < elems; i++, sc = &OMP_CLAUSE_CHAIN (*sc))
-	if ((ptr || attach_detach) && sc == grp_start_p)
+	if (attach_detach && sc == grp_start_p)
 	  break;
 	else if (TREE_CODE (OMP_CLAUSE_DECL (*sc)) != COMPONENT_REF
 		 && TREE_CODE (OMP_CLAUSE_DECL (*sc)) != INDIRECT_REF
@@ -10979,7 +11015,7 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
 		|| (known_eq (coffset, offset)
 		    && maybe_lt (cbitpos, bitpos)))
 	      {
-		if (ptr || attach_detach)
+		if (attach_detach)
 		  scp = sc;
 		else
 		  break;
@@ -10995,7 +11031,9 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
 	     the list manipulation below.  We only need to handle the (pointer
 	     or reference) attach/detach case.  */
 	  tree extra_node, alloc_node;
-	  if (attach_detach)
+	  if (has_descriptor)
+	    gcc_unreachable ();
+	  else if (attach_detach)
 	    alloc_node = build_omp_struct_comp_nodes (code, *grp_start_p,
 						      grp_end, &extra_node);
 	  else
@@ -11028,7 +11066,14 @@ omp_accumulate_sibling_list (enum omp_region_type region_type,
 	  return NULL;
 	}
 
-      if (ptr || attach_detach)
+      if (has_descriptor)
+	{
+	  tree desc = OMP_CLAUSE_CHAIN (*grp_start_p);
+	  omp_siblist_move_node_after (desc,
+				       &OMP_CLAUSE_CHAIN (*grp_start_p),
+				       scp ? scp : sc);
+	}
+      else if (attach_detach)
 	{
 	  tree cl = NULL_TREE, extra_node;
 	  tree alloc_node = build_omp_struct_comp_nodes (code, *grp_start_p,
