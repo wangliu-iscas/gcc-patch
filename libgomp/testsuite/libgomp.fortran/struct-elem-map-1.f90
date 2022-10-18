@@ -229,7 +229,8 @@ contains
 
 !   !$omp target map(tofrom: var%d(4:7), var%f(2:3), var%str2(2:3)) &
 !   !$omp&       map(tofrom: var%str4(2:2), var%uni2(2:3), var%uni4(2:2))
-    !$omp target map(tofrom: var%d(4:7), var%f(2:3), var%str2(2:3), var%uni2(2:3))
+    !$omp target map(to: var%f) map(tofrom: var%d(4:7), var%f(2:3), &
+    !$omp&       var%str2(2:3), var%uni2(2:3))
       if (any (var%d(4:7) /= [(-3*i, i = 4, 7)])) stop 4
       if (any (var%str2(2:3) /= ["67890", "ABCDE"])) stop 6
 
@@ -274,7 +275,7 @@ contains
       if (any (var%str2(2:3) /= ["67890", "ABCDE"])) stop 6
     !$omp end target
 
-    !$omp target map(tofrom: var%f(2:3))
+    !$omp target map(to: var%f) map(tofrom: var%f(2:3))
      if (.not. associated (var%f)) stop 9
      if (size (var%f) /= 4) stop 10
      if (any (var%f(2:3) /= [33, 44])) stop 11
@@ -314,7 +315,8 @@ contains
 
 !   !$omp target map(tofrom: var%d(5), var%f(3), var%str2(3), &
 !   !$omp                    var%str4(2), var%uni2(3), var%uni4(2))
-    !$omp target map(tofrom: var%d(5), var%f(3), var%str2(3), var%uni2(3))
+    !$omp target map(to: var%f) map(tofrom: var%d(5), var%f(3), &
+    !$omp&                                  var%str2(3), var%uni2(3))
       if (var%d(5) /= -3*5) stop 4
       if (var%str2(3) /= "ABCDE") stop 6
       if (var%uni2(3) /= 4_"ABCDE") stop 7
@@ -362,7 +364,7 @@ contains
       if (any (var%uni2(2:3) /= [4_"67890", 4_"ABCDE"])) stop 7
     !$omp end target
 
-    !$omp target map(tofrom: var%f(2:3))
+    !$omp target map(to: var%f) map(tofrom: var%f(2:3))
      if (.not. associated (var%f)) stop 9
      if (size (var%f) /= 4) stop 10
      if (any (var%f(2:3) /= [33, 44])) stop 11
@@ -409,6 +411,3 @@ contains
   end subroutine eight
 
 end program main
-
-! Fixed by the "Fortran pointers and member mappings" patch
-! { dg-xfail-run-if TODO { offload_device_nonshared_as } }
