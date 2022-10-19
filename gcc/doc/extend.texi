@@ -15745,6 +15745,27 @@ Load 32-bits from the @code{struct sk_buff} packet data pointed by the register 
 BPF Compile Once-Run Everywhere (CO-RE) support. Instruct GCC to generate CO-RE relocation records for any accesses to aggregate data structures (struct, union, array types) in @var{expr}. This builtin is otherwise transparent, the return value is whatever @var{expr} evaluates to. It is also overloaded: @var{expr} may be of any type (not necessarily a pointer), the return type is the same. Has no effect if @code{-mco-re} is not in effect (either specified or implied).
 @end deftypefn
 
+@deftypefn {Built-in Function} unsigned int __builtin_preserve_field_info (@var{expr}, unsigned int @var{kind})
+BPF Compile Once-Run Everywhere (CO-RE) support. This builtin is used to
+extract information to aid in struct/union relocations.  @var{expr} is
+an access to a field of a struct or union. Depending on @var{kind}, different
+information is returned to the program. A CO-RE relocation for the access in
+@var{expr} with kind @var{kind} is recorded if @code{-mco-re} is in effect.
+
+@var{kind} is one of:
+@smallexample
+enum
+@{
+  FIELD_BYTE_OFFSET = 0,
+  FIELD_BYTE_SIZE,
+  FIELD_EXISTENCE,
+  FIELD_SIGNEDNESS,
+  FIELD_LSHIFT_U64,
+  FIELD_RSHIFT_U64,
+@};
+@end smallexample
+@end deftypefn
+
 @node FR-V Built-in Functions
 @subsection FR-V Built-in Functions
 
