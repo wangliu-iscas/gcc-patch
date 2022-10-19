@@ -3695,11 +3695,16 @@ non_negative_strides_array_p (tree expr)
 
   /* If the array was originally a dummy with a descriptor, strides can be
      negative.  */
-  if (DECL_P (expr)
-      && DECL_LANG_SPECIFIC (expr)
-      && GFC_DECL_SAVED_DESCRIPTOR (expr)
-      && GFC_DECL_SAVED_DESCRIPTOR (expr) != expr)
-    return non_negative_strides_array_p (GFC_DECL_SAVED_DESCRIPTOR (expr));
+  tree decl = expr;
+  STRIP_NOPS (decl);
+  if (TREE_CODE (decl) == INDIRECT_REF)
+    decl = TREE_OPERAND (decl, 0);
+
+  if (DECL_P (decl)
+      && DECL_LANG_SPECIFIC (decl)
+      && GFC_DECL_SAVED_DESCRIPTOR (decl)
+      && GFC_DECL_SAVED_DESCRIPTOR (decl) != expr)
+    return non_negative_strides_array_p (GFC_DECL_SAVED_DESCRIPTOR (decl));
 
   return true;
 }
