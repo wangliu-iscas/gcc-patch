@@ -243,6 +243,8 @@ diagnostic_initialize (diagnostic_context *context, int n_opts)
   context->final_cb = default_diagnostic_final_cb;
   context->includes_seen = NULL;
   context->m_client_data_hooks = NULL;
+  memset (context->preserve_on_reset, 0,
+	  ARRAY_SIZE (context->preserve_on_reset));
 }
 
 /* Maybe initialize the color support. We require clients to do this

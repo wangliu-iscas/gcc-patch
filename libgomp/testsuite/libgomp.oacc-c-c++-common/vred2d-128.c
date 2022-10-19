@@ -42,46 +42,45 @@ gentest (test1, "acc parallel loop gang vector_length (128) firstprivate (t1, t2
 	 "acc loop vector reduction(+:t1) reduction(-:t2)")
 /* { dg-warning {'t1' is used uninitialized} {} { target *-*-* } outer }
    { dg-note {'t1' was declared here} {} { target *-*-* } vars }
-   { dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-4 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
-/* { dg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
+   { dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-4 }
+
+   { dg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
    { dg-note {'t2' was declared here} {} { target *-*-* } vars }
-   { DUP_dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-8 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
+   { DUP_dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-8 }
+*/
 
 gentest (test2, "acc parallel loop gang vector_length (128) firstprivate (t1, t2)",
 	 "acc loop worker vector reduction(+:t1) reduction(-:t2)")
 /* { DUPdg-warning {'t1' is used uninitialized} {} { target *-*-* } outer }
    { DUP_dg-note {'t1' was declared here} {} { target *-*-* } vars }
-   { dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-4 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
-/* { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
+   { dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-4 }
+
+   { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
    { DUP_dg-note {'t2' was declared here} {} { target *-*-* } vars }
-   { DUP_dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-8 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
+   { DUP_dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-8 }
+*/
 
 gentest (test3, "acc parallel loop gang worker vector_length (128) firstprivate (t1, t2)",
 	 "acc loop vector reduction(+:t1) reduction(-:t2)")
 /* { DUPdg-warning {'t1' is used uninitialized} {} { target *-*-* } outer }
    { DUP_dg-note {'t1' was declared here} {} { target *-*-* } vars }
-   { dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-4 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
-/* { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
+   { dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-4 }
+
+   { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
    { DUP_dg-note {'t2' was declared here} {} { target *-*-* } vars }
-   { DUP_dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-8 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
+   { DUP_dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-8 }
+*/
 
 gentest (test4, "acc parallel loop firstprivate (t1, t2)",
 	 "acc loop reduction(+:t1) reduction(-:t2)")
 /* { DUPdg-warning {'t1' is used uninitialized} {} { target *-*-* } outer }
    { DUP_dg-note {'t1' was declared here} {} { target *-*-* } vars }
-   { dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-4 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
-/* { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
-   { DUP_dg-note {'t2' was declared here} {} { target *-*-* } vars }
-   { DUP_dg-note {in expansion of macro 'gentest'} {} { target { ! offloading_enabled } } .-8 }
-     TODO See PR101551 for 'offloading_enabled' differences.  */
+   { dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-4 }
 
+   { DUPdg-warning {'t2' is used uninitialized} {} { target *-*-* } outer }
+   { DUP_dg-note {'t2' was declared here} {} { target *-*-* } vars }
+   { DUP_dg-note {in expansion of macro 'gentest'} {} { target *-*-* } .-8 }
+*/
 
 int
 main ()

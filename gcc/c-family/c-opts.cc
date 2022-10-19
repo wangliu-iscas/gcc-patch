@@ -182,6 +182,11 @@ void
 c_common_diagnostics_set_defaults (diagnostic_context *context)
 {
   diagnostic_finalizer (context) = c_diagnostic_finalizer;
+
+  /* Our finalizer is the same as the default one, except it also outputs macro
+     tracking information.  This is safe to do in the middle end.  */
+  context->preserve_on_reset[diagnostic_context::PRESERVE_FINALIZER] = true;
+
   context->opt_permissive = OPT_fpermissive;
 }
 

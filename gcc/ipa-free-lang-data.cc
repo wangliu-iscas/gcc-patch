@@ -1115,7 +1115,9 @@ free_lang_data (void)
   /* Reset some langhooks.  Do not reset types_compatible_p, it may
      still be used indirectly via the get_alias_set langhook.  */
   lang_hooks.dwarf_name = lhd_dwarf_name;
-  lang_hooks.decl_printable_name = gimple_decl_printable_name;
+  if (!global_dc->preserve_on_reset[diagnostic_context::
+				    PRESERVE_DECL_PRINTABLE_NAME])
+    lang_hooks.decl_printable_name = gimple_decl_printable_name;
   lang_hooks.gimplify_expr = lhd_gimplify_expr;
   lang_hooks.overwrite_decl_assembler_name = lhd_overwrite_decl_assembler_name;
   lang_hooks.print_xnode = lhd_print_tree_nothing;
@@ -1142,7 +1144,7 @@ free_lang_data (void)
      devise a separate, middle-end private scheme for it.  */
 
   /* Reset diagnostic machinery.  */
-  tree_diagnostics_defaults (global_dc);
+  tree_diagnostics_defaults (global_dc, /* enable_preserve= */ true);
 
   rebuild_type_inheritance_graph ();
 

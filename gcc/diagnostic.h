@@ -414,6 +414,26 @@ struct diagnostic_context
      Used by SARIF output to give metadata about the client that's
      producing diagnostics.  */
   diagnostic_client_data_hooks *m_client_data_hooks;
+
+  /* When transitioning from the frontend to the middle end, the
+     ipa-free-lang-data pass will reset the diagnostic context to the default
+     configuration so that frontend customizations, which may no longer have
+     access to the data structures they expect to exist, will not cause any
+     problems with subsequent diagnostics.  Setting these variables to true
+     allows a frontend to communicate that its customizations are safe to run
+     post ipa-free-lang-data and need not be reset.  */
+  enum {
+    PRESERVE_STARTER = 0,
+    PRESERVE_FINALIZER,
+    PRESERVE_FORMAT_DECODER,
+
+    /* This is a langhook rather than a member of the DC, but it is still
+       convenient to handle it here.  */
+    PRESERVE_DECL_PRINTABLE_NAME,
+
+    PRESERVE_NUM
+  };
+  bool preserve_on_reset[PRESERVE_NUM];
 };
 
 static inline void

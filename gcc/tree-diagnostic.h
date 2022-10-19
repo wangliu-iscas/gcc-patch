@@ -53,7 +53,8 @@ void diagnostic_report_current_function (diagnostic_context *,
 void virt_loc_aware_diagnostic_finalizer (diagnostic_context *,
 					  diagnostic_info *);
 
-void tree_diagnostics_defaults (diagnostic_context *context);
+void tree_diagnostics_defaults (diagnostic_context *context,
+				bool enable_preserve = false);
 bool default_tree_printer (pretty_printer *, text_info *, const char *,
 			   int, bool, bool, bool, bool *, const char **);
 

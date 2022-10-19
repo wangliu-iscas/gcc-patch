@@ -366,11 +366,15 @@ set_inlining_locations (diagnostic_context *,
 
 /* Sets CONTEXT to use language independent diagnostics.  */
 void
-tree_diagnostics_defaults (diagnostic_context *context)
+tree_diagnostics_defaults (diagnostic_context *context, bool enable_preserve)
 {
-  diagnostic_starter (context) = default_tree_diagnostic_starter;
-  diagnostic_finalizer (context) = default_diagnostic_finalizer;
-  diagnostic_format_decoder (context) = default_tree_printer;
+  const auto &p = context->preserve_on_reset;
+  if (!(enable_preserve && p[diagnostic_context::PRESERVE_STARTER]))
+    diagnostic_starter (context) = default_tree_diagnostic_starter;
+  if (!(enable_preserve && p[diagnostic_context::PRESERVE_FINALIZER]))
+    diagnostic_finalizer (context) = default_diagnostic_finalizer;
+  if (!(enable_preserve && p[diagnostic_context::PRESERVE_FORMAT_DECODER]))
+    diagnostic_format_decoder (context) = default_tree_printer;
   context->print_path = default_tree_diagnostic_path_printer;
   context->make_json_for_path = default_tree_make_json_for_path;
   context->set_locations_cb = set_inlining_locations;
