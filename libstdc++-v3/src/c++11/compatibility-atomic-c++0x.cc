@@ -22,9 +22,10 @@
 // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 // <http://www.gnu.org/licenses/>.
 
-#include "gstdint.h"
 #include <atomic>
 #include <mutex>
+
+using guintptr_t = __UINTPTR_TYPE__;
 
 // XXX GLIBCXX_ABI Deprecated
 // gcc-4.7.0
@@ -119,13 +120,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   _GLIBCXX_CONST __atomic_flag_base*
   __atomic_flag_for_address(const volatile void* __z) _GLIBCXX_NOTHROW
   {
-    uintptr_t __u = reinterpret_cast<uintptr_t>(__z);
+    guintptr_t __u = reinterpret_cast<guintptr_t>(__z);
     __u += (__u >> 2) + (__u << 4);
     __u += (__u >> 7) + (__u << 5);
     __u += (__u >> 17) + (__u << 13);
-    if (sizeof(uintptr_t) > 4)
+    if (sizeof(guintptr_t) > 4)
       __u += (__u >> 31);
-    __u &= ~((~uintptr_t(0)) << LOGSIZE);
+    __u &= ~((~guintptr_t(0)) << LOGSIZE);
     return flag_table + __u;
   }
 
