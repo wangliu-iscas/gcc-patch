@@ -1,3 +1,12 @@
+2022-10-20  Michael Eager  <eager@eagercon.com>
+
+	* gcc/config/microblaze/microblaze.cc
+	(microblaze_legitimize_address): Initialize 'reg' to NULL, check for NULL.
+	(microblaze_address_insns): Replace abort() with gcc_unreachable().
+	(print_operand_address): Same.
+	(microblaze_expand_move): Initialize 'p1' to NULL, check for NULL.
+	(get_branch_target): Replace abort() with gcc_unreachable().
+
 2022-10-19  Aldy Hernandez  <aldyh@redhat.com>
 
 	* range-op-float.cc (build_le): Document result.
