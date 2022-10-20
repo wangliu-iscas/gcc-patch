@@ -7135,6 +7135,10 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
 	  continue;
 	n->sym->mark = 0;
 	n->sym->comp_mark = 0;
+	n->sym->data_mark = 0;
+	n->sym->dev_mark = 0;
+	n->sym->gen_mark = 0;
+	n->sym->reduc_mark = 0;
 	if (n->sym->attr.flavor == FL_VARIABLE
 	    || n->sym->attr.proc_pointer
 	    || (!code && (!n->sym->attr.dummy || n->sym->ns != ns)))
@@ -7203,7 +7207,6 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
 	&& list != OMP_LIST_LASTPRIVATE
 	&& list != OMP_LIST_ALIGNED
 	&& list != OMP_LIST_DEPEND
-	&& (list != OMP_LIST_MAP || openacc)
 	&& list != OMP_LIST_FROM
 	&& list != OMP_LIST_TO
 	&& (list != OMP_LIST_REDUCTION || !openacc)
@@ -7222,10 +7225,43 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
 	    for (gfc_ref *ref = n->expr->ref; ref; ref = ref->next)
 	      if (ref->type == REF_COMPONENT)
 		component_ref_p = true;
-	  if ((!component_ref_p && n->sym->comp_mark)
-	      || (component_ref_p && n->sym->mark))
-	    gfc_error ("Symbol %qs has mixed component and non-component "
-		       "accesses at %L", n->sym->name, &n->where);
+	  if ((list == OMP_LIST_IS_DEVICE_PTR
+	       || list == OMP_LIST_HAS_DEVICE_ADDR)
+	      && !component_ref_p)
+	    {
+	      if (n->sym->gen_mark || n->sym->dev_mark || n->sym->reduc_mark)
+		gfc_error ("Symbol %qs present on multiple clauses at %L",
+			   n->sym->name, &n->where);
+	      else
+		n->sym->dev_mark = 1;
+	    }
+	  else if ((list == OMP_LIST_USE_DEVICE_PTR
+		    || list == OMP_LIST_USE_DEVICE_ADDR
+		    || list == OMP_LIST_PRIVATE
+		    || list == OMP_LIST_SHARED)
+		   && !component_ref_p)
+	    {
+	      if (n->sym->gen_mark || n->sym->dev_mark || n->sym->reduc_mark)
+		gfc_error ("Symbol %qs present on multiple clauses at %L",
+			   n->sym->name, &n->where);
+	      else
+		n->sym->gen_mark = 1;
+	    }
+	  else if (list == OMP_LIST_REDUCTION && !component_ref_p)
+	    {
+	      if (n->sym->gen_mark || n->sym->dev_mark || n->sym->reduc_mark)
+		gfc_error ("Symbol %qs present on multiple clauses at %L",
+			   n->sym->name, &n->where);
+	      else
+		n->sym->reduc_mark = 1;
+	    }
+	  else if ((!component_ref_p && n->sym->comp_mark)
+		   || (component_ref_p && n->sym->mark))
+	    {
+	      if (openacc)
+		gfc_error ("Symbol %qs has mixed component and non-component "
+			   "accesses at %L", n->sym->name, &n->where);
+	    }
 	  else if (n->sym->mark)
 	    gfc_error ("Symbol %qs present on multiple clauses at %L",
 		       n->sym->name, &n->where);
@@ -7241,31 +7277,34 @@ resolve_omp_clauses (gfc_code *code, gfc_omp_clauses *omp_clauses,
   gcc_assert (OMP_LIST_LASTPRIVATE == OMP_LIST_FIRSTPRIVATE + 1);
   for (list = OMP_LIST_FIRSTPRIVATE; list <= OMP_LIST_LASTPRIVATE; list++)
     for (n = omp_clauses->lists[list]; n; n = n->next)
-      if (n->sym->mark)
+      if (n->sym->data_mark || n->sym->gen_mark || n->sym->dev_mark)
 	{
 	  gfc_error ("Symbol %qs present on multiple clauses at %L",
 		     n->sym->name, &n->where);
-	  n->sym->mark = 0;
+	  n->sym->data_mark = 0;
 	}
+      else if (n->sym->mark)
+	gfc_error ("Symbol %qs present on both data and map clauses "
+		   "at %L", n->sym->name, &n->where);
 
   for (n = omp_clauses->lists[OMP_LIST_FIRSTPRIVATE]; n; n = n->next)
     {
-      if (n->sym->mark)
+      if (n->sym->data_mark || n->sym->gen_mark || n->sym->dev_mark)
 	gfc_error ("Symbol %qs present on multiple clauses at %L",
 		   n->sym->name, &n->where);
       else
-	n->sym->mark = 1;
+	n->sym->data_mark = 1;
     }
   for (n = omp_clauses->lists[OMP_LIST_LASTPRIVATE]; n; n = n->next)
-    n->sym->mark = 0;
+    n->sym->data_mark = 0;
 
   for (n = omp_clauses->lists[OMP_LIST_LASTPRIVATE]; n; n = n->next)
     {
-      if (n->sym->mark)
+      if (n->sym->data_mark || n->sym->gen_mark || n->sym->dev_mark)
 	gfc_error ("Symbol %qs present on multiple clauses at %L",
 		   n->sym->name, &n->where);
       else
-	n->sym->mark = 1;
+	n->sym->data_mark = 1;
     }
 
   for (n = omp_clauses->lists[OMP_LIST_ALIGNED]; n; n = n->next)
