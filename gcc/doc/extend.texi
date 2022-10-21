@@ -4391,10 +4391,28 @@ zeros all call-used registers that pass arguments.
 @item all-gpr-arg
 zeros all call-used general purpose registers that pass
 arguments.
+
+@item leafy
+Same as @samp{used} in a leaf function, and same as @samp{all} in a
+nonleaf function.
+
+@item leafy-gpr
+Same as @samp{used-gpr} in a leaf function, and same as @samp{all-gpr}
+in a nonleaf function.
+
+@item leafy-arg
+Same as @samp{used-arg} in a leaf function, and same as @samp{all-arg}
+in a nonleaf function.
+
+@item leafy-gpr-arg
+Same as @samp{used-gpr-arg} in a leaf function, and same as
+@samp{all-gpr-arg} in a nonleaf function.
+
 @end table
 
-Of this list, @samp{used-arg}, @samp{used-gpr-arg}, @samp{all-arg},
-and @samp{all-gpr-arg} are mainly used for ROP mitigation.
+Of this list, @samp{used-arg}, @samp{used-gpr-arg}, @samp{leafy-arg},
+@samp{leafy-gpr-arg}, @samp{all-arg}, and @samp{all-gpr-arg} are mainly
+used for ROP mitigation.
 
 The default for the attribute is controlled by @option{-fzero-call-used-regs}.
 @end table
