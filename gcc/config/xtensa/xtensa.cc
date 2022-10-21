@@ -4970,6 +4970,13 @@ xtensa_conditional_register_usage (void)
   /* Remove hard FP register from the preferred reload registers set.  */
   CLEAR_HARD_REG_BIT (reg_class_contents[(int)RL_REGS],
 		      HARD_FRAME_POINTER_REGNUM);
+
+  /* Register A0 holds the return address upon entry to a function
+     for the CALL0 ABI, but unlike the windowed register ABI, it is
+     not reserved for this purpose and may hold other values after
+     the return address has been saved.  */
+  if (!TARGET_WINDOWED_ABI)
+    fixed_regs[A0_REG] = 0;
 }
 
 /* Map hard register number to register class */
