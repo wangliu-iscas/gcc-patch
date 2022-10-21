@@ -70,7 +70,7 @@ public:
   static irange_storage_slot *alloc_slot (vrange_allocator &, const irange &r);
   void set_irange (const irange &r);
   void get_irange (irange &r, tree type) const;
-  wide_int get_nonzero_bits () const { return m_ints[0]; }
+  wide_int get_known_zero_bits () const { return m_ints[0]; }
   bool fits_p (const irange &r) const;
   static size_t size (const irange &r);
   void dump () const;

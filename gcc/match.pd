@@ -1199,7 +1199,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (simplify
  (bit_and (bit_not SSA_NAME@0) INTEGER_CST@1)
  (if (INTEGRAL_TYPE_P (TREE_TYPE (@0))
-      && wi::bit_and_not (get_nonzero_bits (@0), wi::to_wide (@1)) == 0)
+      && wi::bit_and_not (get_known_zero_bits (@0), wi::to_wide (@1)) == 0)
   (bit_xor @0 @1)))
 
 /* For constants M and N, if M == (1LL << cst) - 1 && (N & M) == M,
@@ -1317,7 +1317,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (simplify
  (bit_and SSA_NAME@0 INTEGER_CST@1)
  (if (INTEGRAL_TYPE_P (TREE_TYPE (@0))
-      && wi::bit_and_not (get_nonzero_bits (@0), wi::to_wide (@1)) == 0)
+      && wi::bit_and_not (get_known_zero_bits (@0), wi::to_wide (@1)) == 0)
   @0))
 #endif
 
@@ -2286,7 +2286,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (if (TREE_INT_CST_LOW (@1) & 1)
    { constant_boolean_node (cmp == NE_EXPR, type); })))
 
-/* Arguments on which one can call get_nonzero_bits to get the bits
+/* Arguments on which one can call get_known_zero_bits to get the bits
    possibly set.  */
 (match with_possible_nonzero_bits
  INTEGER_CST@0)
@@ -2300,7 +2300,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  (bit_and:c with_possible_nonzero_bits@0 @2))
 
 /* Same for bits that are known to be set, but we do not have
-   an equivalent to get_nonzero_bits yet.  */
+   an equivalent to get_known_zero_bits yet.  */
 (match (with_certain_nonzero_bits2 @0)
  INTEGER_CST@0)
 (match (with_certain_nonzero_bits2 @0)
@@ -2310,7 +2310,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (for cmp (eq ne)
  (simplify
   (cmp:c (with_possible_nonzero_bits2 @0) (with_certain_nonzero_bits2 @1))
-  (if (wi::bit_and_not (wi::to_wide (@1), get_nonzero_bits (@0)) != 0)
+  (if (wi::bit_and_not (wi::to_wide (@1), get_known_zero_bits (@0)) != 0)
    { constant_boolean_node (cmp == NE_EXPR, type); })))
 
 /* ((X inner_op C0) outer_op C1)
@@ -2336,7 +2336,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
     wide_int cst_emit;
 
     if (TREE_CODE (@2) == SSA_NAME)
-      zero_mask_not = get_nonzero_bits (@2);
+      zero_mask_not = get_known_zero_bits (@2);
     else
       fail = true;
 
@@ -3562,7 +3562,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
       int width = ceil_log2 (element_precision (TREE_TYPE (@0)));
       int prec = TYPE_PRECISION (TREE_TYPE (@1));
      }
-     (if ((get_nonzero_bits (@1) & wi::mask (width, false, prec)) == 0)
+     (if ((get_known_zero_bits (@1) & wi::mask (width, false, prec)) == 0)
       @0)))))
 #endif
 

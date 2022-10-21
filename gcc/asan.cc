@@ -816,7 +816,7 @@ handle_builtin_alloca (gcall *call, gimple_stmt_iterator *iter)
   tree redzone_size = build_int_cst (size_type_node, ASAN_RED_ZONE_SIZE);
 
   /* Extract lower bits from old_size.  */
-  wide_int size_nonzero_bits = get_nonzero_bits (old_size);
+  wide_int size_nonzero_bits = get_known_zero_bits (old_size);
   wide_int rz_mask
     = wi::uhwi (redzone_mask, wi::get_precision (size_nonzero_bits));
   wide_int old_size_lower_bits = wi::bit_and (size_nonzero_bits, rz_mask);

@@ -3858,7 +3858,7 @@ optimize_range_tests_var_bound (enum tree_code opcode, int first, int length,
       /* maybe_optimize_range_tests allows statements without side-effects
 	 in the basic blocks as long as they are consumed in the same bb.
 	 Make sure rhs2's def stmt is not among them, otherwise we can't
-	 use safely get_nonzero_bits on it.  E.g. in:
+	 use safely get_known_zero_bits on it.  E.g. in:
 	  # RANGE [-83, 1] NONZERO 173
 	  # k_32 = PHI <k_47(13), k_12(9)>
 	 ...
@@ -3925,7 +3925,7 @@ optimize_range_tests_var_bound (enum tree_code opcode, int first, int length,
       if (rhs2 == NULL_TREE)
 	continue;
 
-      wide_int nz = get_nonzero_bits (rhs2);
+      wide_int nz = get_known_zero_bits (rhs2);
       if (wi::neg_p (nz))
 	continue;
 

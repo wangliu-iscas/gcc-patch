@@ -2242,7 +2242,7 @@ register_edge_assert_for (tree name, edge e,
    from the non-zero bitmask.  */
 
 void
-maybe_set_nonzero_bits (edge e, tree var)
+maybe_set_known_zero_bits (edge e, tree var)
 {
   basic_block cond_bb = e->src;
   gimple *stmt = last_stmt (cond_bb);
@@ -2276,7 +2276,7 @@ maybe_set_nonzero_bits (edge e, tree var)
 	return;
     }
   cst = gimple_assign_rhs2 (stmt);
-  set_nonzero_bits (var, wi::bit_and_not (get_nonzero_bits (var),
+  set_known_zero_bits (var, wi::bit_and_not (get_known_zero_bits (var),
 					  wi::to_wide (cst)));
 }
 
@@ -3754,7 +3754,7 @@ vrp_asserts::remove_range_assertions ()
 			SSA_NAME_RANGE_INFO (var) = NULL;
 		      }
 		    duplicate_ssa_name_range_info (var, lhs);
-		    maybe_set_nonzero_bits (single_pred_edge (bb), var);
+		    maybe_set_known_zero_bits (single_pred_edge (bb), var);
 		  }
 	      }
 

@@ -10815,7 +10815,7 @@ expr_not_equal_to (tree t, const wide_int &w)
 	return true;
       /* If T has some known zero bits and W has any of those bits set,
 	 then T is known not to be equal to W.  */
-      if (wi::ne_p (wi::zext (wi::bit_and_not (w, get_nonzero_bits (t)),
+      if (wi::ne_p (wi::zext (wi::bit_and_not (w, get_known_zero_bits (t)),
 			      TYPE_PRECISION (TREE_TYPE (t))), 0))
 	return true;
       return false;
@@ -16508,7 +16508,7 @@ tree_nonzero_bits (const_tree t)
     case INTEGER_CST:
       return wi::to_wide (t);
     case SSA_NAME:
-      return get_nonzero_bits (t);
+      return get_known_zero_bits (t);
     case NON_LVALUE_EXPR:
     case SAVE_EXPR:
       return tree_nonzero_bits (TREE_OPERAND (t, 0));

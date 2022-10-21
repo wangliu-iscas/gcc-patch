@@ -150,7 +150,7 @@ irange_storage_slot::set_irange (const irange &r)
 {
   gcc_checking_assert (fits_p (r));
 
-  m_ints[0] = r.get_nonzero_bits ();
+  m_ints[0] = r.get_known_zero_bits ();
 
   unsigned pairs = r.num_pairs ();
   for (unsigned i = 0; i < pairs; ++i)
@@ -174,7 +174,7 @@ irange_storage_slot::get_irange (irange &r, tree type) const
       int_range<2> tmp (type, m_ints[i], m_ints[i + 1]);
       r.union_ (tmp);
     }
-  r.set_nonzero_bits (get_nonzero_bits ());
+  r.set_known_zero_bits (get_known_zero_bits ());
 }
 
 // Return the size in bytes to allocate a slot that can hold R.
@@ -220,7 +220,7 @@ irange_storage_slot::dump () const
       m_ints[i + 1].dump ();
     }
   fprintf (stderr, "NONZERO ");
-  wide_int nz = get_nonzero_bits ();
+  wide_int nz = get_known_zero_bits ();
   nz.dump ();
 }
 

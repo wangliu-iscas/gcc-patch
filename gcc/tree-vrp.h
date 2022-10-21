@@ -61,7 +61,7 @@ extern tree find_case_label_range (gswitch *, const irange *vr);
 extern bool find_case_label_index (gswitch *, size_t, tree, size_t *);
 extern bool overflow_comparison_p (tree_code, tree, tree, bool, tree *);
 extern tree get_single_symbol (tree, bool *, tree *);
-extern void maybe_set_nonzero_bits (edge, tree);
+extern void maybe_set_known_zero_bits (edge, tree);
 extern wide_int masked_increment (const wide_int &val_in, const wide_int &mask,
 				  const wide_int &sgnbit, unsigned int prec);
 

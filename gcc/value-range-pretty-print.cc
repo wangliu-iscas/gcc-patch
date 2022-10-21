@@ -107,7 +107,7 @@ vrange_printer::print_irange_bound (const wide_int &bound, tree type) const
 void
 vrange_printer::print_irange_bitmasks (const irange &r) const
 {
-  wide_int nz = r.get_nonzero_bits ();
+  wide_int nz = r.get_known_zero_bits ();
   if (nz == -1)
     return;
 

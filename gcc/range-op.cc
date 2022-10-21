@@ -804,8 +804,8 @@ operator_lt::fold_range (irange &r, tree type,
     r = range_true (type);
   else if (!wi::lt_p (op1.lower_bound (), op2.upper_bound (), sign))
     r = range_false (type);
-  // Use nonzero bits to determine if < 0 is false.
-  else if (op2.zero_p () && !wi::neg_p (op1.get_nonzero_bits (), sign))
+  // Use known-zero bits to determine if < 0 is false.
+  else if (op2.zero_p () && !wi::neg_p (op1.get_known_zero_bits (), sign))
     r = range_false (type);
   else
     r = range_true_and_false (type);
@@ -2552,16 +2552,16 @@ operator_cast::fold_range (irange &r, tree type ATTRIBUTE_UNUSED,
 	return true;
     }
 
-  // Update the nonzero mask.  Truncating casts are problematic unless
+  // Update the known-zero mask.  Truncating casts are problematic unless
   // the conversion fits in the resulting outer type.
-  wide_int nz = inner.get_nonzero_bits ();
+  wide_int nz = inner.get_known_zero_bits ();
   if (truncating_cast_p (inner, outer)
       && wi::rshift (nz, wi::uhwi (TYPE_PRECISION (outer.type ()),
 				   TYPE_PRECISION (inner.type ())),
 		     TYPE_SIGN (inner.type ())) != 0)
     return true;
   nz = wide_int::from (nz, TYPE_PRECISION (type), TYPE_SIGN (inner.type ()));
-  r.set_nonzero_bits (nz);
+  r.set_known_zero_bits (nz);
 
   return true;
 }
@@ -2794,8 +2794,8 @@ operator_bitwise_and::fold_range (irange &r, tree type,
   if (range_operator::fold_range (r, type, lh, rh))
     {
       if (!lh.undefined_p () && !rh.undefined_p ())
-	r.set_nonzero_bits (wi::bit_and (lh.get_nonzero_bits (),
-					 rh.get_nonzero_bits ()));
+	r.set_known_zero_bits (wi::bit_and (lh.get_known_zero_bits (),
+					 rh.get_known_zero_bits ()));
       return true;
     }
   return false;
@@ -2805,7 +2805,7 @@ operator_bitwise_and::fold_range (irange &r, tree type,
 // Optimize BIT_AND_EXPR, BIT_IOR_EXPR and BIT_XOR_EXPR of signed types
 // by considering the number of leading redundant sign bit copies.
 // clrsb (X op Y) = min (clrsb (X), clrsb (Y)), so for example
-// [-1, 0] op [-1, 0] is [-1, 0] (where nonzero_bits doesn't help).
+// [-1, 0] op [-1, 0] is [-1, 0] (where known-zero bits doesn't help).
 static bool
 wi_optimize_signed_bitwise_op (irange &r, tree type,
 			       const wide_int &lh_lb, const wide_int &lh_ub,
@@ -3046,7 +3046,7 @@ operator_bitwise_and::wi_fold (irange &r, tree type,
 }
 
 static void
-set_nonzero_range_from_mask (irange &r, tree type, const irange &lhs)
+set_known_zero_range_from_mask (irange &r, tree type, const irange &lhs)
 {
   if (!lhs.contains_p (build_zero_cst (type)))
     r = range_nonzero (type);
@@ -3064,7 +3064,7 @@ operator_bitwise_and::simple_op1_range_solver (irange &r, tree type,
 {
   if (!op2.singleton_p ())
     {
-      set_nonzero_range_from_mask (r, type, lhs);
+      set_known_zero_range_from_mask (r, type, lhs);
       return;
     }
   unsigned int nprec = TYPE_PRECISION (type);
@@ -3157,14 +3157,14 @@ operator_bitwise_and::op1_range (irange &r, tree type,
       r.union_ (res);
     }
   if (r.undefined_p ())
-    set_nonzero_range_from_mask (r, type, lhs);
+    set_known_zero_range_from_mask (r, type, lhs);
 
   // For 0 = op1 & MASK, op1 is ~MASK.
   if (lhs.zero_p () && op2.singleton_p ())
     {
-      wide_int nz = wi::bit_not (op2.get_nonzero_bits ());
+      wide_int nz = wi::bit_not (op2.get_known_zero_bits ());
       int_range<2> tmp (type);
-      tmp.set_nonzero_bits (nz);
+      tmp.set_known_zero_bits (nz);
       r.intersect (tmp);
     }
   return true;
@@ -4851,7 +4851,7 @@ range_op_bitwise_and_tests ()
     int_range<2> mask = int_range<2> (INT (7), INT (7));
     op_bitwise_and.op1_range (res, integer_type_node, zero, mask);
     wide_int inv = wi::shwi (~7U, TYPE_PRECISION (integer_type_node));
-    ASSERT_TRUE (res.get_nonzero_bits () == inv);
+    ASSERT_TRUE (res.get_known_zero_bits () == inv);
   }
 
   // (NONZERO | X) is nonzero.

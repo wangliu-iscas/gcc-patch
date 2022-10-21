@@ -156,9 +156,9 @@ public:
   virtual bool fits_p (const vrange &r) const override;
   virtual void accept (const vrange_visitor &v) const override;
 
-  // Nonzero masks.
-  wide_int get_nonzero_bits () const;
-  void set_nonzero_bits (const wide_int_ref &bits);
+  // Known bit masks.
+  wide_int get_known_zero_bits () const;
+  void set_known_zero_bits (const wide_int_ref &bits);
 
   // Deprecated legacy public methods.
   tree min () const;				// DEPRECATED
@@ -207,15 +207,15 @@ private:
 
   void irange_set_1bit_anti_range (tree, tree);
   bool varying_compatible_p () const;
-  bool intersect_nonzero_bits (const irange &r);
-  bool union_nonzero_bits (const irange &r);
-  wide_int get_nonzero_bits_from_range () const;
-  bool set_range_from_nonzero_bits ();
+  bool intersect_known_zero_bits (const irange &r);
+  bool union_known_zero_bits (const irange &r);
+  wide_int get_known_zero_bits_from_range () const;
+  bool set_range_from_known_zero_bits ();
 
   bool intersect (const wide_int& lb, const wide_int& ub);
   unsigned char m_num_ranges;
   unsigned char m_max_ranges;
-  tree m_nonzero_mask;
+  tree m_known_zero_mask;
   tree *m_base;
 };
 
@@ -687,11 +687,11 @@ irange::varying_compatible_p () const
   if (INTEGRAL_TYPE_P (t))
     return (wi::to_wide (l) == wi::min_value (prec, sign)
 	    && wi::to_wide (u) == wi::max_value (prec, sign)
-	    && (!m_nonzero_mask || wi::to_wide (m_nonzero_mask) == -1));
+	    && (!m_known_zero_mask || wi::to_wide (m_known_zero_mask) == -1));
   if (POINTER_TYPE_P (t))
     return (wi::to_wide (l) == 0
 	    && wi::to_wide (u) == wi::max_value (prec, sign)
-	    && (!m_nonzero_mask || wi::to_wide (m_nonzero_mask) == -1));
+	    && (!m_known_zero_mask || wi::to_wide (m_known_zero_mask) == -1));
   return true;
 }
 
@@ -758,8 +758,8 @@ gt_ggc_mx (irange *x)
       gt_ggc_mx (x->m_base[i * 2]);
       gt_ggc_mx (x->m_base[i * 2 + 1]);
     }
-  if (x->m_nonzero_mask)
-    gt_ggc_mx (x->m_nonzero_mask);
+  if (x->m_known_zero_mask)
+    gt_ggc_mx (x->m_known_zero_mask);
 }
 
 inline void
@@ -770,8 +770,8 @@ gt_pch_nx (irange *x)
       gt_pch_nx (x->m_base[i * 2]);
       gt_pch_nx (x->m_base[i * 2 + 1]);
     }
-  if (x->m_nonzero_mask)
-    gt_pch_nx (x->m_nonzero_mask);
+  if (x->m_known_zero_mask)
+    gt_pch_nx (x->m_known_zero_mask);
 }
 
 inline void
@@ -782,8 +782,8 @@ gt_pch_nx (irange *x, gt_pointer_operator op, void *cookie)
       op (&x->m_base[i * 2], NULL, cookie);
       op (&x->m_base[i * 2 + 1], NULL, cookie);
     }
-  if (x->m_nonzero_mask)
-    op (&x->m_nonzero_mask, NULL, cookie);
+  if (x->m_known_zero_mask)
+    op (&x->m_known_zero_mask, NULL, cookie);
 }
 
 template<unsigned N>
@@ -878,7 +878,7 @@ irange::set_undefined ()
 {
   m_kind = VR_UNDEFINED;
   m_num_ranges = 0;
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
 }
 
 inline void
@@ -886,7 +886,7 @@ irange::set_varying (tree type)
 {
   m_kind = VR_VARYING;
   m_num_ranges = 1;
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
 
   if (INTEGRAL_TYPE_P (type))
     {

@@ -477,7 +477,7 @@ public:
     if (lh.undefined_p ())
       return false;
     unsigned prec = TYPE_PRECISION (type);
-    wide_int nz = lh.get_nonzero_bits ();
+    wide_int nz = lh.get_known_zero_bits ();
     wide_int pop = wi::shwi (wi::popcount (nz), prec);
     // Calculating the popcount of a singleton is trivial.
     if (lh.singleton_p ())

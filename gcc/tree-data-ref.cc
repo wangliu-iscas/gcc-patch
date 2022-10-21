@@ -1027,7 +1027,7 @@ split_constant_offset (tree exp, tree *var, tree *off, value_range *exp_range,
 	  wide_int var_min = wi::to_wide (vr.min ());
 	  wide_int var_max = wi::to_wide (vr.max ());
 	  value_range_kind vr_kind = vr.kind ();
-	  wide_int var_nonzero = get_nonzero_bits (exp);
+	  wide_int var_nonzero = get_known_zero_bits (exp);
 	  vr_kind = intersect_range_with_nonzero_bits (vr_kind,
 						       &var_min, &var_max,
 						       var_nonzero,

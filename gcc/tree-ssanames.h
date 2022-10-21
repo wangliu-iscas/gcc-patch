@@ -58,8 +58,8 @@ struct GTY(()) ptr_info_def
 
 /* Sets the value range to SSA.  */
 extern bool set_range_info (tree, const vrange &);
-extern void set_nonzero_bits (tree, const wide_int_ref &);
-extern wide_int get_nonzero_bits (const_tree);
+extern void set_known_zero_bits (tree, const wide_int_ref &);
+extern wide_int get_known_zero_bits (const_tree);
 extern bool ssa_name_has_boolean_range (tree);
 extern void init_ssanames (struct function *, int);
 extern void fini_ssanames (struct function *);

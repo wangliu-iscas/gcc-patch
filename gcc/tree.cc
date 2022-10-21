@@ -3025,7 +3025,7 @@ tree_ctz (const_tree expr)
       ret1 = wi::ctz (wi::to_wide (expr));
       return MIN (ret1, prec);
     case SSA_NAME:
-      ret1 = wi::ctz (get_nonzero_bits (expr));
+      ret1 = wi::ctz (get_known_zero_bits (expr));
       return MIN (ret1, prec);
     case PLUS_EXPR:
     case MINUS_EXPR:

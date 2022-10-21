@@ -837,7 +837,7 @@ irange::operator= (const irange &src)
 
   m_num_ranges = lim;
   m_kind = src.m_kind;
-  m_nonzero_mask = src.m_nonzero_mask;
+  m_known_zero_mask = src.m_known_zero_mask;
   if (flag_checking)
     verify_range ();
   return *this;
@@ -894,7 +894,7 @@ irange::copy_to_legacy (const irange &src)
       m_base[0] = src.m_base[0];
       m_base[1] = src.m_base[1];
       m_kind = src.m_kind;
-      m_nonzero_mask = src.m_nonzero_mask;
+      m_known_zero_mask = src.m_known_zero_mask;
       return;
     }
   // Copy multi-range to legacy.
@@ -959,7 +959,7 @@ irange::irange_set (tree min, tree max)
   m_base[1] = max;
   m_num_ranges = 1;
   m_kind = VR_RANGE;
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
   normalize_kind ();
 
   if (flag_checking)
@@ -1033,7 +1033,7 @@ irange::irange_set_anti_range (tree min, tree max)
     }
 
   m_kind = VR_RANGE;
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
   normalize_kind ();
 
   if (flag_checking)
@@ -1090,7 +1090,7 @@ irange::set (tree min, tree max, value_range_kind kind)
       m_base[0] = min;
       m_base[1] = max;
       m_num_ranges = 1;
-      m_nonzero_mask = NULL;
+      m_known_zero_mask = NULL;
       return;
     }
 
@@ -1140,7 +1140,7 @@ irange::set (tree min, tree max, value_range_kind kind)
   m_base[0] = min;
   m_base[1] = max;
   m_num_ranges = 1;
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
   normalize_kind ();
   if (flag_checking)
     verify_range ();
@@ -1159,8 +1159,8 @@ irange::verify_range ()
     }
   if (m_kind == VR_VARYING)
     {
-      gcc_checking_assert (!m_nonzero_mask
-			   || wi::to_wide (m_nonzero_mask) == -1);
+      gcc_checking_assert (!m_known_zero_mask
+			   || wi::to_wide (m_known_zero_mask) == -1);
       gcc_checking_assert (m_num_ranges == 1);
       gcc_checking_assert (varying_compatible_p ());
       return;
@@ -1255,7 +1255,7 @@ irange::legacy_equal_p (const irange &other) const
 			       other.tree_lower_bound (0))
 	  && vrp_operand_equal_p (tree_upper_bound (0),
 				  other.tree_upper_bound (0))
-	  && get_nonzero_bits () == other.get_nonzero_bits ());
+	  && get_known_zero_bits () == other.get_known_zero_bits ());
 }
 
 bool
@@ -1290,7 +1290,7 @@ irange::operator== (const irange &other) const
 	  || !operand_equal_p (ub, ub_other, 0))
 	return false;
     }
-  return get_nonzero_bits () == other.get_nonzero_bits ();
+  return get_known_zero_bits () == other.get_known_zero_bits ();
 }
 
 /* Return TRUE if this is a symbolic range.  */
@@ -1433,11 +1433,11 @@ irange::contains_p (tree cst) const
 
   gcc_checking_assert (TREE_CODE (cst) == INTEGER_CST);
 
-  // See if we can exclude CST based on the nonzero bits.
-  if (m_nonzero_mask)
+  // See if we can exclude CST based on the known-zero bits.
+  if (m_known_zero_mask)
     {
       wide_int cstw = wi::to_wide (cst);
-      if (cstw != 0 && wi::bit_and (wi::to_wide (m_nonzero_mask), cstw) == 0)
+      if (cstw != 0 && wi::bit_and (wi::to_wide (m_known_zero_mask), cstw) == 0)
 	return false;
     }
 
@@ -2335,7 +2335,7 @@ irange::irange_single_pair_union (const irange &r)
     {
       // If current upper bound is new upper bound, we're done.
       if (wi::le_p (wi::to_wide (r.m_base[1]), wi::to_wide (m_base[1]), sign))
-	return union_nonzero_bits (r);
+	return union_known_zero_bits (r);
       // Otherwise R has the new upper bound.
       // Check for overlap/touching ranges, or single target range.
       if (m_max_ranges == 1
@@ -2348,7 +2348,7 @@ irange::irange_single_pair_union (const irange &r)
 	  m_base[3] = r.m_base[1];
 	  m_num_ranges = 2;
 	}
-      union_nonzero_bits (r);
+      union_known_zero_bits (r);
       return true;
     }
 
@@ -2371,7 +2371,7 @@ irange::irange_single_pair_union (const irange &r)
       m_base[3] = m_base[1];
       m_base[1] = r.m_base[1];
     }
-  union_nonzero_bits (r);
+  union_known_zero_bits (r);
   return true;
 }
 
@@ -2408,7 +2408,7 @@ irange::irange_union (const irange &r)
 
   // If this ranges fully contains R, then we need do nothing.
   if (irange_contains_p (r))
-    return union_nonzero_bits (r);
+    return union_known_zero_bits (r);
 
   // Do not worry about merging and such by reserving twice as many
   // pairs as needed, and then simply sort the 2 ranges into this
@@ -2496,7 +2496,7 @@ irange::irange_union (const irange &r)
   m_num_ranges = i / 2;
 
   m_kind = VR_RANGE;
-  union_nonzero_bits (r);
+  union_known_zero_bits (r);
   return true;
 }
 
@@ -2576,13 +2576,13 @@ irange::irange_intersect (const irange &r)
       if (undefined_p ())
 	return true;
 
-      res |= intersect_nonzero_bits (r);
+      res |= intersect_known_zero_bits (r);
       return res;
     }
 
   // If R fully contains this, then intersection will change nothing.
   if (r.irange_contains_p (*this))
-    return intersect_nonzero_bits (r);
+    return intersect_known_zero_bits (r);
 
   signop sign = TYPE_SIGN (TREE_TYPE(m_base[0]));
   unsigned bld_pair = 0;
@@ -2658,7 +2658,7 @@ irange::irange_intersect (const irange &r)
     }
 
   m_kind = VR_RANGE;
-  intersect_nonzero_bits (r);
+  intersect_known_zero_bits (r);
   return true;
 }
 
@@ -2801,7 +2801,7 @@ irange::invert ()
   signop sign = TYPE_SIGN (ttype);
   wide_int type_min = wi::min_value (prec, sign);
   wide_int type_max = wi::max_value (prec, sign);
-  m_nonzero_mask = NULL;
+  m_known_zero_mask = NULL;
   if (m_num_ranges == m_max_ranges
       && lower_bound () != type_min
       && upper_bound () != type_max)
@@ -2876,10 +2876,10 @@ irange::invert ()
     verify_range ();
 }
 
-// Return the nonzero bits inherent in the range.
+// Return the known-zero bits inherent in the range.
 
 wide_int
-irange::get_nonzero_bits_from_range () const
+irange::get_known_zero_bits_from_range () const
 {
   // For legacy symbolics.
   if (!constant_p ())
@@ -2900,25 +2900,25 @@ irange::get_nonzero_bits_from_range () const
 // so and return TRUE.
 
 bool
-irange::set_range_from_nonzero_bits ()
+irange::set_range_from_known_zero_bits ()
 {
   gcc_checking_assert (!undefined_p ());
-  if (!m_nonzero_mask)
+  if (!m_known_zero_mask)
     return false;
-  unsigned popcount = wi::popcount (wi::to_wide (m_nonzero_mask));
+  unsigned popcount = wi::popcount (wi::to_wide (m_known_zero_mask));
 
   // If we have only one bit set in the mask, we can figure out the
   // range immediately.
   if (popcount == 1)
     {
       // Make sure we don't pessimize the range.
-      if (!contains_p (m_nonzero_mask))
+      if (!contains_p (m_known_zero_mask))
 	return false;
 
       bool has_zero = contains_p (build_zero_cst (type ()));
-      tree nz = m_nonzero_mask;
+      tree nz = m_known_zero_mask;
       set (nz, nz);
-      m_nonzero_mask = nz;
+      m_known_zero_mask = nz;
       if (has_zero)
 	{
 	  int_range<2> zero;
@@ -2936,14 +2936,14 @@ irange::set_range_from_nonzero_bits ()
 }
 
 void
-irange::set_nonzero_bits (const wide_int_ref &bits)
+irange::set_known_zero_bits (const wide_int_ref &bits)
 {
   gcc_checking_assert (!undefined_p ());
   unsigned prec = TYPE_PRECISION (type ());
 
   if (bits == -1)
     {
-      m_nonzero_mask = NULL;
+      m_known_zero_mask = NULL;
       normalize_kind ();
       if (flag_checking)
 	verify_range ();
@@ -2955,8 +2955,8 @@ irange::set_nonzero_bits (const wide_int_ref &bits)
     m_kind = VR_RANGE;
 
   wide_int nz = wide_int::from (bits, prec, TYPE_SIGN (type ()));
-  m_nonzero_mask = wide_int_to_tree (type (), nz);
-  if (set_range_from_nonzero_bits ())
+  m_known_zero_mask = wide_int_to_tree (type (), nz);
+  if (set_range_from_known_zero_bits ())
     return;
 
   normalize_kind ();
@@ -2964,11 +2964,11 @@ irange::set_nonzero_bits (const wide_int_ref &bits)
     verify_range ();
 }
 
-// Return the nonzero bitmask.  This will return the nonzero bits plus
-// the nonzero bits inherent in the range.
+// Return the nonzero bitmask.  This will return the known-zero bits plus
+// the known-zero bits inherent in the range.
 
 wide_int
-irange::get_nonzero_bits () const
+irange::get_known_zero_bits () const
 {
   gcc_checking_assert (!undefined_p ());
   // The nonzero mask inherent in the range is calculated on-demand.
@@ -2979,10 +2979,10 @@ irange::get_nonzero_bits () const
   // the mask precisely up to date at all times.  Instead, we default
   // to -1 and set it when explicitly requested.  However, this
   // function will always return the correct mask.
-  if (m_nonzero_mask)
-    return wi::to_wide (m_nonzero_mask) & get_nonzero_bits_from_range ();
+  if (m_known_zero_mask)
+    return wi::to_wide (m_known_zero_mask) & get_known_zero_bits_from_range ();
   else
-    return get_nonzero_bits_from_range ();
+    return get_known_zero_bits_from_range ();
 }
 
 // Convert tree mask to wide_int.  Returns -1 for NULL masks.
@@ -2996,15 +2996,15 @@ mask_to_wi (tree mask, tree type)
     return wi::shwi (-1, TYPE_PRECISION (type));
 }
 
-// Intersect the nonzero bits in R into THIS and normalize the range.
+// Intersect the known-zero bits in R into THIS and normalize the range.
 // Return TRUE if the intersection changed anything.
 
 bool
-irange::intersect_nonzero_bits (const irange &r)
+irange::intersect_known_zero_bits (const irange &r)
 {
   gcc_checking_assert (!undefined_p () && !r.undefined_p ());
 
-  if (!m_nonzero_mask && !r.m_nonzero_mask)
+  if (!m_known_zero_mask && !r.m_known_zero_mask)
     {
       normalize_kind ();
       if (flag_checking)
@@ -3014,11 +3014,11 @@ irange::intersect_nonzero_bits (const irange &r)
 
   bool changed = false;
   tree t = type ();
-  if (mask_to_wi (m_nonzero_mask, t) != mask_to_wi (r.m_nonzero_mask, t))
+  if (mask_to_wi (m_known_zero_mask, t) != mask_to_wi (r.m_known_zero_mask, t))
     {
-      wide_int nz = get_nonzero_bits () & r.get_nonzero_bits ();
-      m_nonzero_mask = wide_int_to_tree (t, nz);
-      if (set_range_from_nonzero_bits ())
+      wide_int nz = get_known_zero_bits () & r.get_known_zero_bits ();
+      m_known_zero_mask = wide_int_to_tree (t, nz);
+      if (set_range_from_known_zero_bits ())
 	return true;
       changed = true;
     }
@@ -3028,15 +3028,15 @@ irange::intersect_nonzero_bits (const irange &r)
   return changed;
 }
 
-// Union the nonzero bits in R into THIS and normalize the range.
+// Union the known-zero bits in R into THIS and normalize the range.
 // Return TRUE if the union changed anything.
 
 bool
-irange::union_nonzero_bits (const irange &r)
+irange::union_known_zero_bits (const irange &r)
 {
   gcc_checking_assert (!undefined_p () && !r.undefined_p ());
 
-  if (!m_nonzero_mask && !r.m_nonzero_mask)
+  if (!m_known_zero_mask && !r.m_known_zero_mask)
     {
       normalize_kind ();
       if (flag_checking)
@@ -3046,14 +3046,14 @@ irange::union_nonzero_bits (const irange &r)
 
   bool changed = false;
   tree t = type ();
-  if (mask_to_wi (m_nonzero_mask, t) != mask_to_wi (r.m_nonzero_mask, t))
+  if (mask_to_wi (m_known_zero_mask, t) != mask_to_wi (r.m_known_zero_mask, t))
     {
-      wide_int nz = get_nonzero_bits () | r.get_nonzero_bits ();
-      m_nonzero_mask = wide_int_to_tree (t, nz);
-      // No need to call set_range_from_nonzero_bits, because we'll
+      wide_int nz = get_known_zero_bits () | r.get_known_zero_bits ();
+      m_known_zero_mask = wide_int_to_tree (t, nz);
+      // No need to call set_range_from_known_zero_bits, because we'll
       // never narrow the range.  Besides, it would cause endless
       // recursion because of the union_ in
-      // set_range_from_nonzero_bits.
+      // set_range_from_known_zero_bits.
       changed = true;
     }
   normalize_kind ();
@@ -3626,58 +3626,58 @@ range_tests_nonzero_bits ()
 {
   int_range<2> r0, r1;
 
-  // Adding nonzero bits to a varying drops the varying.
+  // Adding known-zero bits to a varying drops the varying.
   r0.set_varying (integer_type_node);
-  r0.set_nonzero_bits (255);
+  r0.set_known_zero_bits (255);
   ASSERT_TRUE (!r0.varying_p ());
-  // Dropping the nonzero bits brings us back to varying.
-  r0.set_nonzero_bits (-1);
+  // Dropping the known-zero bits brings us back to varying.
+  r0.set_known_zero_bits (-1);
   ASSERT_TRUE (r0.varying_p ());
 
-  // Test contains_p with nonzero bits.
+  // Test contains_p with known-zero bits.
   r0.set_zero (integer_type_node);
   ASSERT_TRUE (r0.contains_p (INT (0)));
   ASSERT_FALSE (r0.contains_p (INT (1)));
-  r0.set_nonzero_bits (0xfe);
+  r0.set_known_zero_bits (0xfe);
   ASSERT_FALSE (r0.contains_p (INT (0x100)));
   ASSERT_FALSE (r0.contains_p (INT (0x3)));
 
-  // Union of nonzero bits.
+  // Union of known-zero bits.
   r0.set_varying (integer_type_node);
-  r0.set_nonzero_bits (0xf0);
+  r0.set_known_zero_bits (0xf0);
   r1.set_varying (integer_type_node);
-  r1.set_nonzero_bits (0xf);
+  r1.set_known_zero_bits (0xf);
   r0.union_ (r1);
-  ASSERT_TRUE (r0.get_nonzero_bits () == 0xff);
+  ASSERT_TRUE (r0.get_known_zero_bits () == 0xff);
 
-  // Intersect of nonzero bits.
+  // Intersect of known-zero bits.
   r0.set (INT (0), INT (255));
-  r0.set_nonzero_bits (0xfe);
+  r0.set_known_zero_bits (0xfe);
   r1.set_varying (integer_type_node);
-  r1.set_nonzero_bits (0xf0);
+  r1.set_known_zero_bits (0xf0);
   r0.intersect (r1);
-  ASSERT_TRUE (r0.get_nonzero_bits () == 0xf0);
+  ASSERT_TRUE (r0.get_known_zero_bits () == 0xf0);
 
-  // Intersect where the mask of nonzero bits is implicit from the range.
+  // Intersect where the mask of known-zero bits is implicit from the range.
   r0.set_varying (integer_type_node);
   r1.set (INT (0), INT (255));
   r0.intersect (r1);
-  ASSERT_TRUE (r0.get_nonzero_bits () == 0xff);
+  ASSERT_TRUE (r0.get_known_zero_bits () == 0xff);
 
   // The union of a mask of 0xff..ffff00 with a mask of 0xff spans the
   // entire domain, and makes the range a varying.
   r0.set_varying (integer_type_node);
   wide_int x = wi::shwi (0xff, TYPE_PRECISION (integer_type_node));
   x = wi::bit_not (x);
-  r0.set_nonzero_bits (x); 	// 0xff..ff00
+  r0.set_known_zero_bits (x); 	// 0xff..ff00
   r1.set_varying (integer_type_node);
-  r1.set_nonzero_bits (0xff);
+  r1.set_known_zero_bits (0xff);
   r0.union_ (r1);
   ASSERT_TRUE (r0.varying_p ());
 
   // Test that setting a nonzero bit of 1 does not pessimize the range.
   r0.set_zero (integer_type_node);
-  r0.set_nonzero_bits (1);
+  r0.set_known_zero_bits (1);
   ASSERT_TRUE (r0.zero_p ());
 }
 

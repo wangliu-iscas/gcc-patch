@@ -1380,7 +1380,7 @@ dom_opt_dom_walker::set_global_ranges_from_unreachable_edges (basic_block bb)
 	    && !r.undefined_p ())
 	  {
 	    set_range_info (name, r);
-	    maybe_set_nonzero_bits (pred_e, name);
+	    maybe_set_known_zero_bits (pred_e, name);
 	  }
       }
 }

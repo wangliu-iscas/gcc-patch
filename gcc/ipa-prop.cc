@@ -2331,7 +2331,7 @@ ipa_compute_jump_functions_for_edge (struct ipa_func_body_info *fbi,
 	{
 	  if (TREE_CODE (arg) == SSA_NAME)
 	    ipa_set_jfunc_bits (jfunc, 0,
-				widest_int::from (get_nonzero_bits (arg),
+				widest_int::from (get_known_zero_bits (arg),
 						  TYPE_SIGN (TREE_TYPE (arg))));
 	  else
 	    ipa_set_jfunc_bits (jfunc, wi::to_widest (arg), 0);
@@ -5816,7 +5816,7 @@ ipcp_update_bits (struct cgraph_node *node)
 
 	  wide_int nonzero_bits = wide_int::from (bits[i]->mask, prec, UNSIGNED)
 				  | wide_int::from (bits[i]->value, prec, sgn);
-	  set_nonzero_bits (ddef, nonzero_bits);
+	  set_known_zero_bits (ddef, nonzero_bits);
 	}
       else
 	{

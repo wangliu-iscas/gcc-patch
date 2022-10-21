@@ -297,7 +297,7 @@ get_default_value (tree var)
 	  val.mask = -1;
 	  if (flag_tree_bit_ccp)
 	    {
-	      wide_int nonzero_bits = get_nonzero_bits (var);
+	      wide_int nonzero_bits = get_known_zero_bits (var);
 	      tree value;
 	      widest_int mask;
 
@@ -1013,8 +1013,8 @@ ccp_finalize (bool nonzero_p)
 	  wide_int nonzero_bits
 	    = (wide_int::from (val->mask, precision, UNSIGNED)
 	       | wi::to_wide (val->value));
-	  nonzero_bits &= get_nonzero_bits (name);
-	  set_nonzero_bits (name, nonzero_bits);
+	  nonzero_bits &= get_known_zero_bits (name);
+	  set_known_zero_bits (name, nonzero_bits);
 	}
     }
 
@@ -2438,7 +2438,7 @@ evaluate_stmt (gimple *stmt)
       && TREE_CODE (gimple_get_lhs (stmt)) == SSA_NAME)
     {
       tree lhs = gimple_get_lhs (stmt);
-      wide_int nonzero_bits = get_nonzero_bits (lhs);
+      wide_int nonzero_bits = get_known_zero_bits (lhs);
       if (nonzero_bits != -1)
 	{
 	  if (!is_constant)

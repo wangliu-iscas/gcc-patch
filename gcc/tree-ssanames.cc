@@ -456,23 +456,23 @@ set_ptr_nonnull (tree name)
   pi->pt.null = 0;
 }
 
-/* Update the non-zero bits bitmask of NAME.  */
+/* Update the known-zero bits bitmask of NAME.  */
 
 void
-set_nonzero_bits (tree name, const wide_int_ref &mask)
+set_known_zero_bits (tree name, const wide_int_ref &mask)
 {
   gcc_assert (!POINTER_TYPE_P (TREE_TYPE (name)));
 
   int_range<2> r (TREE_TYPE (name));
-  r.set_nonzero_bits (mask);
+  r.set_known_zero_bits (mask);
   set_range_info (name, r);
 }
 
-/* Return a widest_int with potentially non-zero bits in SSA_NAME
+/* Return a widest_int with potentially known-zero bits in SSA_NAME
    NAME, the constant for INTEGER_CST, or -1 if unknown.  */
 
 wide_int
-get_nonzero_bits (const_tree name)
+get_known_zero_bits (const_tree name)
 {
   if (TREE_CODE (name) == INTEGER_CST)
     return wi::to_wide (name);
@@ -497,7 +497,7 @@ get_nonzero_bits (const_tree name)
      through vrange_storage.  */
   irange_storage_slot *ri
     = static_cast <irange_storage_slot *> (SSA_NAME_RANGE_INFO (name));
-  return ri->get_nonzero_bits ();
+  return ri->get_known_zero_bits ();
 }
 
 /* Return TRUE is OP, an SSA_NAME has a range of values [0..1], false
@@ -534,7 +534,7 @@ ssa_name_has_boolean_range (tree op)
       if (get_range_query (cfun)->range_of_expr (r, op) && r == onezero)
 	return true;
 
-      if (wi::eq_p (get_nonzero_bits (op), 1))
+      if (wi::eq_p (get_known_zero_bits (op), 1))
 	return true;
     }
 

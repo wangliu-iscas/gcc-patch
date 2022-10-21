@@ -1119,7 +1119,7 @@ ipcp_bits_lattice::known_nonzero_p () const
 void
 ipcp_bits_lattice::get_value_and_mask (tree operand, widest_int *valuep, widest_int *maskp)
 {
-  wide_int get_nonzero_bits (const_tree);
+  wide_int get_known_zero_bits (const_tree);
 
   if (TREE_CODE (operand) == INTEGER_CST)
     {

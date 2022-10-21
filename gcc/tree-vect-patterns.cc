@@ -71,7 +71,7 @@ vect_get_range_info (tree var, wide_int *min_value, wide_int *max_value)
   *min_value = wi::to_wide (vr.min ());
   *max_value = wi::to_wide (vr.max ());
   value_range_kind vr_type = vr.kind ();
-  wide_int nonzero = get_nonzero_bits (var);
+  wide_int nonzero = get_known_zero_bits (var);
   signop sgn = TYPE_SIGN (TREE_TYPE (var));
   if (intersect_range_with_nonzero_bits (vr_type, min_value, max_value,
 					 nonzero, sgn) == VR_RANGE)
