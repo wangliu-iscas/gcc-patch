@@ -8579,41 +8579,7 @@ grokfield (location_t loc,
 static bool
 is_duplicate_field (tree x, tree y)
 {
-  if (DECL_NAME (x) != NULL_TREE && DECL_NAME (x) == DECL_NAME (y))
-    return true;
-
-  /* When using -fplan9-extensions, an anonymous field whose name is a
-     typedef can duplicate a field name.  */
-  if (flag_plan9_extensions
-      && (DECL_NAME (x) == NULL_TREE || DECL_NAME (y) == NULL_TREE))
-    {
-      tree xt, xn, yt, yn;
-
-      xt = TREE_TYPE (x);
-      if (DECL_NAME (x) != NULL_TREE)
-	xn = DECL_NAME (x);
-      else if (RECORD_OR_UNION_TYPE_P (xt)
-	       && TYPE_NAME (xt) != NULL_TREE
-	       && TREE_CODE (TYPE_NAME (xt)) == TYPE_DECL)
-	xn = DECL_NAME (TYPE_NAME (xt));
-      else
-	xn = NULL_TREE;
-
-      yt = TREE_TYPE (y);
-      if (DECL_NAME (y) != NULL_TREE)
-	yn = DECL_NAME (y);
-      else if (RECORD_OR_UNION_TYPE_P (yt)
-	       && TYPE_NAME (yt) != NULL_TREE
-	       && TREE_CODE (TYPE_NAME (yt)) == TYPE_DECL)
-	yn = DECL_NAME (TYPE_NAME (yt));
-      else
-	yn = NULL_TREE;
-
-      if (xn != NULL_TREE && xn == yn)
-	return true;
-    }
-
-  return false;
+  return DECL_NAME (x) != NULL_TREE && DECL_NAME (x) == DECL_NAME (y);
 }
 
 /* Subroutine of detect_field_duplicates: add the fields of FIELDLIST
@@ -8640,19 +8606,6 @@ detect_field_duplicates_hash (tree fieldlist,
     else if (RECORD_OR_UNION_TYPE_P (TREE_TYPE (x)))
       {
 	detect_field_duplicates_hash (TYPE_FIELDS (TREE_TYPE (x)), htab);
-
-	/* When using -fplan9-extensions, an anonymous field whose
-	   name is a typedef can duplicate a field name.  */
-	if (flag_plan9_extensions
-	    && TYPE_NAME (TREE_TYPE (x)) != NULL_TREE
-	    && TREE_CODE (TYPE_NAME (TREE_TYPE (x))) == TYPE_DECL)
-	  {
-	    tree xn = DECL_NAME (TYPE_NAME (TREE_TYPE (x)));
-	    slot = htab->find_slot (xn, INSERT);
-	    if (*slot)
-	      error ("duplicate member %q+D", TYPE_NAME (TREE_TYPE (x)));
-	    *slot = xn;
-	  }
       }
 }
 
@@ -8680,6 +8633,11 @@ detect_field_duplicates (tree fieldlist)
     if (objc_detect_field_duplicates (false))
       return;
 
+  /* When using -fplan9-extensions, do not perform duplicate field
+     checks until a field look up is performed.  */
+  if (flag_plan9_extensions)
+   return;
+
   /* First, see if there are more than "a few" fields.
      This is trivially true if there are zero or one fields.  */
   if (!fieldlist || !DECL_CHAIN (fieldlist))
@@ -8699,14 +8657,7 @@ detect_field_duplicates (tree fieldlist)
   if (timeout > 0)
     {
       for (x = DECL_CHAIN (fieldlist); x; x = DECL_CHAIN (x))
-	/* When using -fplan9-extensions, we can have duplicates
-	   between typedef names and fields.  */
-	if (DECL_NAME (x)
-	    || (flag_plan9_extensions
-		&& DECL_NAME (x) == NULL_TREE
-		&& RECORD_OR_UNION_TYPE_P (TREE_TYPE (x))
-		&& TYPE_NAME (TREE_TYPE (x)) != NULL_TREE
-		&& TREE_CODE (TYPE_NAME (TREE_TYPE (x))) == TYPE_DECL))
+	if (DECL_NAME (x))
 	  {
 	    for (y = fieldlist; y != x; y = TREE_CHAIN (y))
 	      if (is_duplicate_field (y, x))

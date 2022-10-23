@@ -5,6 +5,8 @@
 
 struct A {
   char a;		/* { dg-error "duplicate member" } */
+  char b;
+  char b;
 };
 
 struct B
@@ -44,6 +46,13 @@ struct E
 {
   struct C;
   struct D;
+};
+
+struct F
+{
+  char a;
+  char a;
+  char a;
 };
 
 char

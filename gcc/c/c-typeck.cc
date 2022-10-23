@@ -95,6 +95,7 @@ static int comp_target_types (location_t, tree, tree);
 static int function_types_compatible_p (const_tree, const_tree, bool *,
 					bool *);
 static int type_lists_compatible_p (const_tree, const_tree, bool *, bool *);
+static tree lookup_field_plan9 (tree, tree);
 static tree lookup_field (tree, tree);
 static int convert_arguments (location_t, vec<location_t>, tree,
 			      vec<tree, va_gc> *, vec<tree, va_gc> *, tree,
@@ -2280,6 +2281,81 @@ default_conversion (tree exp)
   return exp;
 }
 
+/* Look up COMPONENT in a structure or union TYPE like a Plan 9 C compiler.
+
+   Look up is performed in 3 passes:
+   1.  Look for field names that match the look up name.
+   2.  Look for anonymous records who's typedef name matches the look up name.
+   3.  Look for fields in embedded anonymous records.
+
+   If the component name is not found, returns NULL_TREE. If the component
+   name references multiple fields, issue an error.  */
+
+static tree
+lookup_field_plan9 (tree type, tree component)
+{
+  tree field;
+  tree found = NULL_TREE;
+
+  /* Passes 1 & 2 are fused: conflicts are an error.  */
+  for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
+    {
+      /* Pass 1.  */
+      if (DECL_NAME (field) == component)
+	{
+	  if (found != NULL_TREE)
+	    {
+	      error ("duplicate member %q+D", found);
+	      return NULL_TREE;
+	    }
+	  found = field;
+	}
+
+      /* Pass 2.  */
+      if (DECL_NAME (field) == NULL_TREE
+	  && RECORD_OR_UNION_TYPE_P (TREE_TYPE (field)))
+	{
+	  if (TYPE_NAME (TREE_TYPE (field)) != NULL_TREE
+	      && TREE_CODE (TYPE_NAME (TREE_TYPE (field))) == TYPE_DECL
+	      && (DECL_NAME (TYPE_NAME (TREE_TYPE (field)))
+		  == component))
+	    {
+	      if (found != NULL_TREE)
+		{
+		  error ("duplicate member %q+D", found);
+		  return NULL_TREE;
+		}
+	      found = field;
+	    }
+	}
+    }
+
+  if (found != NULL_TREE)
+    return tree_cons (NULL_TREE, found, NULL_TREE);
+
+  /* Pass 3.  */
+  for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
+    {
+      if (DECL_NAME (field) == NULL_TREE
+	  && RECORD_OR_UNION_TYPE_P (TREE_TYPE (field)))
+	{
+	  tree anon = lookup_field_plan9 (TREE_TYPE (field), component);
+
+	  if (anon != NULL_TREE)
+	    {
+	      if (found != NULL_TREE)
+		{
+		  error ("duplicate member %q+D", TREE_VALUE (nreverse (anon)));
+		  return NULL_TREE;
+		}
+	      found = tree_cons (NULL_TREE, field, anon);
+	    }
+	}
+    }
+
+  return found;
+}
+
 /* Look up COMPONENT in a structure or union TYPE.
 
    If the component name is not found, returns NULL_TREE.  Otherwise,
@@ -2293,6 +2369,10 @@ static tree
 lookup_field (tree type, tree component)
 {
   tree field;
+
+  /* The Plan 9 compiler has a different field resolution scheme.  */
+  if (flag_plan9_extensions)
+    return lookup_field_plan9 (type, component);
 
   /* If TYPE_LANG_SPECIFIC is set, then it is a sorted array of pointers
      to the field elements.  Use a binary search on this array to quickly
@@ -2329,17 +2409,6 @@ lookup_field (tree type, tree component)
 
 		      if (anon)
 			return tree_cons (NULL_TREE, field, anon);
-
-		      /* The Plan 9 compiler permits referring
-			 directly to an anonymous struct/union field
-			 using a typedef name.  */
-		      if (flag_plan9_extensions
-			  && TYPE_NAME (TREE_TYPE (field)) != NULL_TREE
-			  && (TREE_CODE (TYPE_NAME (TREE_TYPE (field)))
-			      == TYPE_DECL)
-			  && (DECL_NAME (TYPE_NAME (TREE_TYPE (field)))
-			      == component))
-			break;
 		    }
 		}
 
@@ -2375,16 +2444,6 @@ lookup_field (tree type, tree component)
 
 	      if (anon)
 		return tree_cons (NULL_TREE, field, anon);
-
-	      /* The Plan 9 compiler permits referring directly to an
-		 anonymous struct/union field using a typedef
-		 name.  */
-	      if (flag_plan9_extensions
-		  && TYPE_NAME (TREE_TYPE (field)) != NULL_TREE
-		  && TREE_CODE (TYPE_NAME (TREE_TYPE (field))) == TYPE_DECL
-		  && (DECL_NAME (TYPE_NAME (TREE_TYPE (field)))
-		      == component))
-		break;
 	    }
 
 	  if (DECL_NAME (field) == component)
