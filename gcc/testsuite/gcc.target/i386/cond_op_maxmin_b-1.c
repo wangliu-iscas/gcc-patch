@@ -1,5 +1,5 @@
 /* { dg-do compile } */
-/* { dg-options "-O2 -march=skylake-avx512 -DTYPE=int8 -fdump-tree-optimized" } */
+/* { dg-options "-O2 -march=skylake-avx512 -DTYPE=int8 -fno-unroll-loops -fdump-tree-optimized" } */
 /* { dg-final { scan-tree-dump ".COND_MAX" "optimized" } } */
 /* { dg-final { scan-tree-dump ".COND_MIN" "optimized" } } */
 /* { dg-final { scan-assembler-times "vpmaxsb"  1 } } */

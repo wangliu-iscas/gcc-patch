@@ -2,7 +2,7 @@
 /* This is a test exercising peeling for alignment for a positive step
    vector loop.  We're forcing atom tuning here because that has a higher
    unaligned vs aligned cost unlike most other archs.  */
-/* { dg-options "-O3 -march=x86-64 -mtune=atom -fdump-tree-vect-details -save-temps" } */
+/* { dg-options "-O3 -march=x86-64 -mtune=atom -fno-unroll-loops -fdump-tree-vect-details -save-temps" } */
 
 float a[1024], b[1024];
 

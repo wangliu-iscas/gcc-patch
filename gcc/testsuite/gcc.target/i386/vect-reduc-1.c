@@ -1,5 +1,5 @@
 /* { dg-do compile } */
-/* { dg-options "-O3 -mavx2 -mno-avx512f -fdump-tree-vect-details" } */
+/* { dg-options "-O3 -mavx2 -mno-avx512f -fno-unroll-loops -fdump-tree-vect-details" } */
 
 #define N 32
 int foo (int *a, int n)

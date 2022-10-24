@@ -1224,3 +1224,18 @@ mavxvnniint8
 Target Mask(ISA2_AVXVNNIINT8) Var(ix86_isa_flags2) Save
 Support MMX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2 and
 AVXVNNIINT8 built-in functions and code generation.
+
+-param=x86-vect-unroll-limit=
+Target Joined UInteger Var(x86_vect_unroll_limit) Init(4) IntegerRange(1, 8) Param
+Used to limit unroll factor which indicates how much the autovectorizer may
+unroll a loop.  The default value is 4.
+
+-param=x86-vect-unroll-min-ldst-threshold=
+Target Joined UInteger Var(x86_vect_unroll_min_ldst_threshold) Init(25) Param
+Used to limit the mininum of loads and stores in the main loop.  The default
+value is 25.
+
+-param=x86-vect-unroll-max-loop-size=
+Target Joined UInteger Var(x86_vect_unroll_max_loop_size) Init(200) Param
+This threshold is used to limit the maxnum size of loop body after unrolling.
+The default value is 200.

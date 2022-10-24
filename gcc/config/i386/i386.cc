@@ -23336,6 +23336,17 @@ class ix86_vector_costs : public vector_costs
 			      stmt_vec_info stmt_info, slp_tree node,
 			      tree vectype, int misalign,
 			      vect_cost_model_location where) override;
+
+  unsigned int determine_suggested_unroll_factor (loop_vec_info);
+
+  void finish_cost (const vector_costs *) override;
+
+  /* Total number of vectorized stmts (loop only).  */
+  unsigned m_nstmts = 0;
+  /* Total number of loads (loop only).  */
+  unsigned m_nloads = 0;
+  /* Total number of stores (loop only).  */
+  unsigned m_nstores = 0;
 };
 
 /* Implement targetm.vectorize.create_costs.  */
@@ -23577,6 +23588,19 @@ ix86_vector_costs::add_stmt_cost (int count, vect_cost_for_stmt kind,
       tree lhs_op = gimple_get_lhs (stmt_info->stmt);
       if (lhs_op && TREE_CODE (TREE_TYPE (lhs_op)) == INTEGER_TYPE)
 	retval = (retval * 17) / 10;
+    }
+
+  if (!m_costing_for_scalar
+      && is_a<loop_vec_info> (m_vinfo)
+      && where == vect_body)
+    {
+      m_nstmts += count;
+      if (kind == scalar_load || kind == vector_load
+	  || kind == unaligned_load || kind == vector_gather_load)
+	m_nloads += count;
+      else if (kind == scalar_store || kind == vector_store
+	       || kind == unaligned_store || kind == vector_scatter_store)
+	m_nstores += count;
     }
 
   m_costs[where] += retval;
@@ -23850,6 +23874,88 @@ ix86_loop_unroll_adjust (unsigned nunroll, class loop *loop)
   return nunroll;
 }
 
+unsigned int
+ix86_vector_costs::determine_suggested_unroll_factor (loop_vec_info loop_vinfo)
+{
+  class loop *loop = LOOP_VINFO_LOOP (loop_vinfo);
+
+  /* Don't unroll if it's specified explicitly not to be unrolled.  */
+  if (loop->unroll == 1
+      || (OPTION_SET_P (flag_unroll_loops) && !flag_unroll_loops)
+      || (OPTION_SET_P (flag_unroll_all_loops) && !flag_unroll_all_loops))
+    return 1;
+
+  /* Don't unroll if there is no vectorized stmt.  */
+  if (m_nstmts == 0)
+    return 1;
+
+  /* Don't unroll if vector size is zmm, since zmm throughput is lower than other
+     sizes.  */
+  if (GET_MODE_SIZE (loop_vinfo->vector_mode) == 64)
+    return 1;
+
+  /* Calc the total number of loads and stores in the loop body.  */
+  unsigned int nstmts_ldst = m_nloads + m_nstores;
+
+  /* Don't unroll if loop body size big than threshold, the threshold
+     is a heuristic value inspired by param_max_unrolled_insns.  */
+  unsigned int uf = m_nstmts < (unsigned int)x86_vect_unroll_max_loop_size
+		    ? ((unsigned int)x86_vect_unroll_max_loop_size / m_nstmts)
+		    : 1;
+  uf = MIN ((unsigned int)x86_vect_unroll_limit, uf);
+  uf = 1 << ceil_log2 (uf);
+
+  /* Early return if don't need to unroll.  */
+  if (uf == 1)
+    return 1;
+
+  /* Inspired by SPEC2017 fotonik3d_r, we want to aggressively unroll the loop
+     if the number of loads and stores exceeds the threshold, unroll + software
+     schedule will reduce cache miss rate.  */
+  if (nstmts_ldst >= (unsigned int)x86_vect_unroll_min_ldst_threshold)
+    return uf;
+
+  HOST_WIDE_INT est_niter = get_estimated_loop_iterations_int (loop);
+  unsigned int vf = vect_vf_for_cost (loop_vinfo);
+  unsigned int unrolled_vf = vf * uf;
+  if (est_niter == -1 || est_niter < unrolled_vf)
+    /* When the estimated iteration of this loop is unknown, it's possible
+       that we are able to vectorize this loop with the original VF but fail
+       to vectorize it with the unrolled VF any more if the actual iteration
+       count is in between.  */
+    return 1;
+  else
+    {
+      unsigned int epil_niter_unr = est_niter % unrolled_vf;
+      unsigned int epil_niter = est_niter % vf;
+      /* Even if we have partial vector support, it can be still inefficent
+	to calculate the length when the iteration count is unknown, so
+	only expect it's good to unroll when the epilogue iteration count
+	is not bigger than VF (only one time length calculation).  */
+      if (LOOP_VINFO_CAN_USE_PARTIAL_VECTORS_P (loop_vinfo)
+	  && epil_niter_unr <= vf)
+       return uf;
+      /* Without partial vector support, conservatively unroll this when
+	the epilogue iteration count is less than the original one
+	(epilogue execution time wouldn't be longer than before).  */
+      else if (!LOOP_VINFO_CAN_USE_PARTIAL_VECTORS_P (loop_vinfo)
+	       && epil_niter_unr <= epil_niter)
+       return uf;
+    }
+
+  return 1;
+}
+
+void
+ix86_vector_costs::finish_cost (const vector_costs *scalar_costs)
+
+{
+  if (loop_vec_info loop_vinfo = dyn_cast<loop_vec_info> (m_vinfo))
+    {
+      m_suggested_unroll_factor = determine_suggested_unroll_factor (loop_vinfo);
+    }
+  vector_costs::finish_cost (scalar_costs);
+}
 
 /* Implement TARGET_FLOAT_EXCEPTIONS_ROUNDING_SUPPORTED_P.  */
 

@@ -15779,6 +15779,23 @@ The following choices of @var{name} are available on i386 and x86_64 targets:
 @item x86-stlf-window-ninsns
 Instructions number above which STFL stall penalty can be compensated.
 
+@item x86-vect-unroll-limit
+The vectorizer will check with target information to determine whether it
+would be beneficial to unroll the main vectorized loop and by how much.  This
+parameter sets the upper bound of how much the vectorizer will unroll the main
+loop.  The default value is four.
+
+@item x86-vect-unroll-min-ldst-threshold
+The vectorizer will check with target information to determine whether unroll
+it. This parameter is used to limit the mininum of loads and stores in the main
+loop.
+
+@item x86-vect-unroll-max-loop-size
+The vectorizer will check with target information to determine whether unroll
+it. This threshold is used to limit the max size of loop body after unrolling.
+The default value is 200.
+
+
 @end table
 
 @end table
