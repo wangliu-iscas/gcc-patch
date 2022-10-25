@@ -4,6 +4,10 @@
 
 #include <pthread.h>
 
+// Include this to get the libstdc++ _GLIBCXX_USE_PTHREAD_COND_CLOCKWAIT
+// macro that indicates pthread_cond_clockwait is available.
+#include <type_traits>
+
 pthread_cond_t cv;
 pthread_mutex_t mtx;
 
@@ -23,7 +27,9 @@ int main() {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     ts.tv_sec += 10;
+#ifdef _GLIBCXX_USE_PTHREAD_COND_CLOCKWAIT
     pthread_cond_clockwait(&cv, &mtx, CLOCK_MONOTONIC, &ts);
+#endif
     pthread_mutex_unlock(&mtx);
 
     pthread_join(tid, NULL);
