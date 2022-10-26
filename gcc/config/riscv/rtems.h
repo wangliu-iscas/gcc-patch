@@ -29,3 +29,5 @@
 	builtin_define ("__USE_INIT_FINI__");	\
 	builtin_assert ("system=rtems");	\
     } while (0)
+
+#define RISCV_GCOV_TYPE_SIZE (TARGET_64BIT ? 64 : 32)

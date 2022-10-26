@@ -6637,6 +6637,17 @@ riscv_vector_alignment (const_tree type)
 #undef TARGET_VECTOR_ALIGNMENT
 #define TARGET_VECTOR_ALIGNMENT riscv_vector_alignment
 
+#ifdef RISCV_GCOV_TYPE_SIZE
+static HOST_WIDE_INT
+riscv_gcov_type_size (void)
+{
+  return RISCV_GCOV_TYPE_SIZE;
+}
+
+#undef TARGET_GCOV_TYPE_SIZE
+#define TARGET_GCOV_TYPE_SIZE riscv_gcov_type_size
+#endif
+
 struct gcc_target targetm = TARGET_INITIALIZER;
 
 #include "gt-riscv.h"
