@@ -10231,6 +10231,7 @@ rs6000_emit_set_long_const (rtx dest, HOST_WIDE_INT c)
 {
   rtx temp;
   HOST_WIDE_INT ud1, ud2, ud3, ud4;
+  HOST_WIDE_INT orig_c = c;
 
   ud1 = c & 0xffff;
   c = c >> 16;
@@ -10256,21 +10257,41 @@ rs6000_emit_set_long_const (rtx dest, HOST_WIDE_INT c)
 			gen_rtx_IOR (DImode, copy_rtx (temp),
 				     GEN_INT (ud1)));
     }
+  else if ((ud4 == 0xffff && ud3 == 0xffff)
+	   && ((ud1 & 0x8000) || (ud1 == 0 && !(ud2 & 0x8000))))
+    {
+      temp = !can_create_pseudo_p () ? dest : gen_reg_rtx (DImode);
+
+      HOST_WIDE_INT imm = (ud1 & 0x8000) ? ((ud1 ^ 0x8000) - 0x8000)
+					 : ((ud2 << 16) - 0x80000000);
+      /* li/lis + xoris */
+      emit_move_insn (temp, GEN_INT (imm));
+      emit_move_insn (dest, gen_rtx_XOR (DImode, temp,
+					 GEN_INT (orig_c ^ imm)));
+    }
   else if (ud3 == 0 && ud4 == 0)
     {
       temp = !can_create_pseudo_p () ? dest : gen_reg_rtx (DImode);
 
       gcc_assert (ud2 & 0x8000);
-      emit_move_insn (copy_rtx (temp),
-		      GEN_INT (((ud2 << 16) ^ 0x80000000) - 0x80000000));
-      if (ud1 != 0)
-	emit_move_insn (copy_rtx (temp),
-			gen_rtx_IOR (DImode, copy_rtx (temp),
-				     GEN_INT (ud1)));
-      emit_move_insn (dest,
-		      gen_rtx_ZERO_EXTEND (DImode,
-					   gen_lowpart (SImode,
-							copy_rtx (temp))));
+
+      if (!(ud1 & 0x8000))
+	{
+	  /* li+oris */
+	  emit_move_insn (temp, GEN_INT (ud1));
+	  emit_move_insn (dest,
+			  gen_rtx_IOR (DImode, temp, GEN_INT (ud2 << 16)));
+	}
+      else
+	{
+	  emit_move_insn (temp,
+			  GEN_INT (((ud2 << 16) ^ 0x80000000) - 0x80000000));
+	  if (ud1 != 0)
+	    emit_move_insn (temp, gen_rtx_IOR (DImode, temp, GEN_INT (ud1)));
+	  emit_move_insn (dest,
+			  gen_rtx_ZERO_EXTEND (DImode,
+					       gen_lowpart (SImode, temp)));
+	}
     }
   else if (ud1 == ud3 && ud2 == ud4)
     {
