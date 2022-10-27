@@ -1,5 +1,11 @@
 2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
 
+	* include/charset.cc: Add `_cpp_valid_utf8_str` which determines
+	whether a C string is valid UTF-8 or not.
+	* include/internal.h: Add prototype for `_cpp_valid_utf8_str`.
+
+2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
+
 	* include/charset.cc: Reject encodings of codepoints above 0x10FFFF.
 	UTF-16 does not support such codepoints and therefore all Unicode
 	rejects such values.
