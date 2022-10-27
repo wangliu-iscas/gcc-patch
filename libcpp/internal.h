@@ -834,6 +834,8 @@ extern bool _cpp_valid_utf8 (cpp_reader *pfile,
 			     struct normalize_state *nst,
 			     cppchar_t *cp);
 
+extern bool _cpp_valid_utf8_str (const char *str);
+
 extern void _cpp_destroy_iconv (cpp_reader *);
 extern unsigned char *_cpp_convert_input (cpp_reader *, const char *,
 					  unsigned char *, size_t, size_t,
