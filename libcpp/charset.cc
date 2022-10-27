@@ -216,7 +216,7 @@ one_utf8_to_cppchar (const uchar **inbufp, size_t *inbytesleftp,
   if (c <= 0x3FFFFFF && nbytes > 5) return EILSEQ;
 
   /* Make sure the character is valid.  */
-  if (c > 0x7FFFFFFF || (c >= 0xD800 && c <= 0xDFFF)) return EILSEQ;
+  if (c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF)) return EILSEQ;
 
   *cp = c;
   *inbufp = inbuf;
@@ -320,7 +320,7 @@ one_utf32_to_utf8 (iconv_t bigend, const uchar **inbufp, size_t *inbytesleftp,
   s += inbuf[bigend ? 2 : 1] << 8;
   s += inbuf[bigend ? 3 : 0];
 
-  if (s >= 0x7FFFFFFF || (s >= 0xD800 && s <= 0xDFFF))
+  if (s > 0x10FFFF || (s >= 0xD800 && s <= 0xDFFF))
     return EILSEQ;
 
   rval = one_cppchar_to_utf8 (s, outbufp, outbytesleftp);
