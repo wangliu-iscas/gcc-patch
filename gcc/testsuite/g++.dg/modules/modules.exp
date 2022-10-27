@@ -28,6 +28,7 @@
 # { dg-module-do [link|run] [xfail] [options] } # link [and run]
 
 load_lib g++-dg.exp
+load_lib modules.exp
 
 # If a testcase doesn't have special options, use these.
 global DEFAULT_CXXFLAGS
@@ -237,6 +238,13 @@ proc cleanup_module_files { files } {
     }
 }
 
+# delete the specified set of dep files
+proc cleanup_dep_files { files } {
+    foreach file $files {
+	file_on_host delete $file
+    }
+}
+
 global testdir
 set testdir $srcdir/$subdir
 proc srcdir {} {
@@ -310,6 +318,7 @@ foreach src [lsort [find $srcdir/$subdir {*_a.[CHX}]] {
 	set std_list [module-init $src]
 	foreach std $std_list {
 	    set mod_files {}
+	    set dep_files {}
 	    global module_do
 	    set module_do {"compile" "P"}
 	    set asm_list {}
@@ -346,6 +355,8 @@ foreach src [lsort [find $srcdir/$subdir {*_a.[CHX}]] {
 		set mod_files [find $DEFAULT_REPO *.gcm]
 	    }
 	    cleanup_module_files $mod_files
+
+	    cleanup_dep_files $dep_files
 	}
     }
 }

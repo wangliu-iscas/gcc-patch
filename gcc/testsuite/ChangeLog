@@ -1,3 +1,10 @@
+2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
+
+	* g++.dg/modules/depflags*: New tests.
+	* g++.dg/modules/p1689*: New tests.
+	* g++.dg/modules/test-p1689.py: New tool for validating P1689 output.
+	* lib/modules.exp: Support for validating P1689 outputs.
+
 2022-10-26  David Malcolm  <dmalcolm@redhat.com>
 
 	* gcc.dg/analyzer/fd-3.c (test_5): Expect "opened here" message

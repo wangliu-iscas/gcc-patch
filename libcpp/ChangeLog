@@ -1,5 +1,16 @@
 2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
 
+	* include/cpplib.h: Add cpp_deps_format enum.
+	* include/cpplib.h (cpp_options): Add format field.
+	* include/cpplib.h (cpp_finish): Add dependency stream parameter.
+	* include/mkdeps.h (deps_add_module_target): Add new preprocessor
+	parameter used for C++ module tracking.
+	* init.cc (cpp_finish): Add new preprocessor parameter used for C++
+	module tracking.
+	* mkdeps.cc (mkdeps): Implement P1689R5 output.
+
+2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
+
 	* include/charset.cc: Add `_cpp_valid_utf8_str` which determines
 	whether a C string is valid UTF-8 or not.
 	* include/internal.h: Add prototype for `_cpp_valid_utf8_str`.

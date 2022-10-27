@@ -1,3 +1,9 @@
+2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
+
+	* c-opts.cc (c_common_handle_option): Add fdeps_file variable and
+	-fdeps-format=, -fdep-file=, and -fdep-output= parsing.
+	* c.opt: Add -fdeps-format=, -fdep-file=, and -fdep-output= flags.
+
 2022-10-26  Marek Polacek  <polacek@redhat.com>
 
 	PR c++/106393

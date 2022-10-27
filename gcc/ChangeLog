@@ -1,3 +1,8 @@
+2022-10-27  Ben Boeckel  <ben.boeckel@kitware.com>
+
+	* doc/invoke.texi: Document -fdeps-format=, -fdep-file=, and
+	-fdep-output= flags.
+
 2022-10-26  David Faust  <david.faust@oracle.com>
 
 	* config/bpf/bpf.cc: Support __builtin_preserve_field_info.
