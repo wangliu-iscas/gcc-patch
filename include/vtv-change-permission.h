@@ -48,6 +48,11 @@ extern void __VLTChangePermission (int);
 #else 
 #if defined(__sun__) && defined(__svr4__) && defined(__sparc__)
 #define VTV_PAGE_SIZE 8192
+#elif defined(__loongarch_lp64)
+/* The page size can be configured to 4, 16, or 64KB configuring the kernel.
+   However, only 16KB pages are supported here. Please modify this macro if you
+   want to support other page sizes.  */
+#define VTV_PAGE_SIZE 16384
 #else
 #define VTV_PAGE_SIZE 4096
 #endif
