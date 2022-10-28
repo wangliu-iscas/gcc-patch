@@ -43,6 +43,7 @@ extern "C" {
 #  define HAS_DRIVE_SPEC(f) HAS_DOS_DRIVE_SPEC (f)
 #  define IS_DIR_SEPARATOR(c) IS_DOS_DIR_SEPARATOR (c)
 #  define IS_ABSOLUTE_PATH(f) IS_DOS_ABSOLUTE_PATH (f)
+#  define IS_REAL_ABSOLUTE_PATH(f) IS_DOS_REAL_ABSOLUTE_PATH (f)
 #else /* not DOSish */
 #  if defined(__APPLE__)
 #    ifndef HAVE_CASE_INSENSITIVE_FILE_SYSTEM
@@ -52,6 +53,7 @@ extern "C" {
 #  define HAS_DRIVE_SPEC(f) (0)
 #  define IS_DIR_SEPARATOR(c) IS_UNIX_DIR_SEPARATOR (c)
 #  define IS_ABSOLUTE_PATH(f) IS_UNIX_ABSOLUTE_PATH (f)
+#  define IS_REAL_ABSOLUTE_PATH(f) IS_ABSOLUTE_PATH (f)
 #endif
 
 #define IS_DIR_SEPARATOR_1(dos_based, c)				\
@@ -67,6 +69,8 @@ extern "C" {
 
 #define IS_DOS_DIR_SEPARATOR(c) IS_DIR_SEPARATOR_1 (1, c)
 #define IS_DOS_ABSOLUTE_PATH(f) IS_ABSOLUTE_PATH_1 (1, f)
+#define IS_DOS_REAL_ABSOLUTE_PATH(f) \
+  ((f)[0] && (f)[1] == ':' && ((f)[2] == '/' || (f)[2] == '\\'))
 #define HAS_DOS_DRIVE_SPEC(f) HAS_DRIVE_SPEC_1 (1, f)
 
 #define IS_UNIX_DIR_SEPARATOR(c) IS_DIR_SEPARATOR_1 (0, c)

@@ -13958,7 +13958,7 @@ get_module (tree name, module_state *parent, bool partition)
 static module_state *
 get_module (const char *ptr)
 {
-  if (ptr[0] == '.' ? IS_DIR_SEPARATOR (ptr[1]) : IS_ABSOLUTE_PATH (ptr))
+  if (ptr[0] == '.' ? IS_DIR_SEPARATOR (ptr[1]) : IS_REAL_ABSOLUTE_PATH (ptr))
     /* A header name.  */
     return get_module (build_string (strlen (ptr), ptr));
 
