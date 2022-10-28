@@ -2508,7 +2508,7 @@ create_function_arglist (gfc_symbol * sym)
   tree fndecl;
   gfc_formal_arglist *f;
   tree typelist, hidden_typelist;
-  tree arglist, hidden_arglist;
+  tree arglist, hidden_arglist, optional_arglist, strlen_arglist;
   tree type;
   tree parm;
 
@@ -2518,6 +2518,7 @@ create_function_arglist (gfc_symbol * sym)
      the new FUNCTION_DECL node.  */
   arglist = NULL_TREE;
   hidden_arglist = NULL_TREE;
+  strlen_arglist = optional_arglist = NULL_TREE;
   typelist = TYPE_ARG_TYPES (TREE_TYPE (fndecl));
 
   if (sym->attr.entry_master)
@@ -2644,7 +2645,7 @@ create_function_arglist (gfc_symbol * sym)
 	  length = build_decl (input_location,
 			       PARM_DECL, get_identifier (name), len_type);
 
-	  hidden_arglist = chainon (hidden_arglist, length);
+	  strlen_arglist = chainon (strlen_arglist, length);
 	  DECL_CONTEXT (length) = fndecl;
 	  DECL_ARTIFICIAL (length) = 1;
 	  DECL_ARG_TYPE (length) = len_type;
@@ -2712,7 +2713,7 @@ create_function_arglist (gfc_symbol * sym)
 			    PARM_DECL, get_identifier (name),
 			    boolean_type_node);
 
-          hidden_arglist = chainon (hidden_arglist, tmp);
+	  optional_arglist = chainon (optional_arglist, tmp);
           DECL_CONTEXT (tmp) = fndecl;
           DECL_ARTIFICIAL (tmp) = 1;
           DECL_ARG_TYPE (tmp) = boolean_type_node;
@@ -2863,10 +2864,16 @@ create_function_arglist (gfc_symbol * sym)
       typelist = TREE_CHAIN (typelist);
     }
 
+  /* Add hidden present status for optional+value arguments.  */
+  arglist = chainon (arglist, optional_arglist);
+
   /* Add the hidden string length parameters, unless the procedure
      is bind(C).  */
   if (!sym->attr.is_bind_c)
-    arglist = chainon (arglist, hidden_arglist);
+    arglist = chainon (arglist, strlen_arglist);
+
+  /* Add hidden extra arguments for the gfortran library.  */
+  arglist = chainon (arglist, hidden_arglist);
 
   gcc_assert (hidden_typelist == NULL_TREE
               || TREE_VALUE (hidden_typelist) == void_type_node);
