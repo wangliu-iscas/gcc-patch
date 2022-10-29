@@ -46,7 +46,7 @@
 ;; "u" "A signed 52bit constant and low 32-bit is zero (for logic instructions)"
 ;; "v" "A signed 64-bit constant and low 44-bit is zero (for logic instructions)."
 ;; "w" "Matches any valid memory."
-;; "x" <-----unused
+;; "x" "A signed 64-bit constant and low 32-bit is zero (for logic instructions)."
 ;; "y" <-----unused
 ;; "z" FCC_REGS
 ;; "A" <-----unused
@@ -138,6 +138,11 @@
   "A signed 64-bit constant and low 44-bit is zero (for logic instructions)."
   (and (match_code "const_int")
        (match_test "LU52I_OPERAND (ival)")))
+
+(define_constraint "x"
+  "A signed 64-bit constant and low 32-bit is zero (for logic instructions)."
+  (and (match_code "const_int")
+       (match_test "HI32_OPERAND (ival)")))
 
 (define_register_constraint "z" "FCC_REGS"
   "A floating-point condition code register.")

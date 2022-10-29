@@ -605,6 +605,12 @@ enum reg_class
 #define LU52I_OPERAND(VALUE) \
   (((VALUE) | (HWIT_UC_0xFFF << 52)) == (HWIT_UC_0xFFF << 52))
 
+/* True if VALUE can be loaded into a register using load_hi32.  */
+
+#define HWIT_UC_0xFFFFFFFF HOST_WIDE_INT_UC(0xffffffff)
+#define HI32_OPERAND(VALUE) \
+  (((VALUE) | (HWIT_UC_0xFFFFFFFF << 32)) == (HWIT_UC_0xFFFFFFFF << 32))
+
 /* Return a value X with the low 12 bits clear, and such that
    VALUE - X is a signed 12-bit value.  */
 
