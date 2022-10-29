@@ -35,6 +35,10 @@
   (and (match_code "const_int")
        (match_test "LU52I_OPERAND (INTVAL (op))")))
 
+(define_predicate "const_hi32_operand"
+  (and (match_code "const_int")
+       (match_test "HI32_OPERAND (INTVAL (op))")))
+
 (define_predicate "const_arith_operand"
   (and (match_code "const_int")
        (match_test "IMM12_OPERAND (INTVAL (op))")))
@@ -102,6 +106,10 @@
 (define_predicate "lu52i_mask_operand"
   (and (match_code "const_int")
        (match_test "UINTVAL (op) == 0xfffffffffffff")))
+
+(define_predicate "hi32_mask_operand"
+  (and (match_code "const_int")
+       (match_test "UINTVAL (op) == 0xffffffff")))
 
 (define_predicate "low_bitmask_operand"
   (and (match_code "const_int")

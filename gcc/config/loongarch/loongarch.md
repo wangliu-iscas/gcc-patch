@@ -1882,6 +1882,32 @@
   DONE;
 })
 
+(define_insn_and_split "load_hi32"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(ior:DI
+	  (and:DI (match_operand:DI 1 "register_operand" "0")
+		  (match_operand 2 "hi32_mask_operand"))
+	(match_operand 3 "const_hi32_operand" "x")))]
+  "TARGET_64BIT"
+  "#"
+  ""
+  [(set (match_dup 0)
+        (ior:DI
+          (zero_extend:DI
+            (subreg:SI (match_dup 1) 0))
+          (match_dup 4)))
+   (set (match_dup 0)
+        (ior:DI
+          (and:DI (match_dup 0)
+                  (match_dup 6))
+          (match_dup 5)))]
+{
+  operands[4] = GEN_INT (INTVAL (operands[3]) << 12 >> 12);
+  operands[5] = GEN_INT (INTVAL (operands[3]) & 0xfff0000000000000);
+  operands[6] = GEN_INT (0xfffffffffffff);
+}
+  [(set_attr "insn_count" "2")])
+
 (define_insn "lu32i_d"
   [(set (match_operand:DI 0 "register_operand" "=r")
 	(ior:DI
