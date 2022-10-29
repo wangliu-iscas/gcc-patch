@@ -179,5 +179,6 @@ extern tree loongarch_builtin_decl (unsigned int, bool);
 extern rtx loongarch_expand_builtin (tree, rtx, rtx subtarget ATTRIBUTE_UNUSED,
 				     machine_mode, int);
 extern tree loongarch_build_builtin_va_list (void);
+extern rtx loongarch_prefetch_cookie (rtx, rtx);
 
 #endif /* ! GCC_LOONGARCH_PROTOS_H */

@@ -63,6 +63,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "context.h"
 #include "builtins.h"
 #include "rtl-iter.h"
+#include "params.h"
 
 /* This file should be included last.  */
 #include "target-def.h"
@@ -6126,6 +6127,33 @@ loongarch_option_override_internal (struct gcc_options *opts)
   if (loongarch_branch_cost == 0)
     loongarch_branch_cost = loongarch_cost->branch_cost;
 
+  /* Set up parameters to be used in prefetching algorithm. */
+  maybe_set_param_value (PARAM_SIMULTANEOUS_PREFETCHES,
+			 loongarch_cpu_cache[LARCH_ACTUAL_TUNE].simultaneous_prefetches,
+			 opts->x_param_values,
+			 opts_set->x_param_values);
+
+  maybe_set_param_value (PARAM_L1_CACHE_LINE_SIZE,
+			 loongarch_cpu_cache[LARCH_ACTUAL_TUNE].l1d_line_size,
+			 opts->x_param_values,
+			 opts_set->x_param_values);
+
+  maybe_set_param_value (PARAM_L1_CACHE_SIZE,
+			 loongarch_cpu_cache[LARCH_ACTUAL_TUNE].l1d_size,
+			 opts->x_param_values,
+			 opts_set->x_param_values);
+
+  maybe_set_param_value (PARAM_L2_CACHE_SIZE,
+			 loongarch_cpu_cache[LARCH_ACTUAL_TUNE].l2d_size,
+			 opts->x_param_values,
+			 opts_set->x_param_values);
+
+  /* Enable sw prefetching at -O3 and higher. */
+  if (opts->x_flag_prefetch_loop_arrays < 0
+      && (opts->x_optimize >= 3 || opts->x_flag_profile_use)
+      && !opts->x_optimize_size)
+    opts->x_flag_prefetch_loop_arrays = 1;
+
   if (TARGET_DIRECT_EXTERN_ACCESS && flag_shlib)
     error ("%qs cannot be used for compiling a shared library",
 	   "-mdirect-extern-access");
@@ -6504,6 +6532,26 @@ loongarch_asan_shadow_offset (void)
   /* We only have libsanitizer support for LOONGARCH64 at present.
      This value is taken from the file libsanitizer/asan/asan_mapping.h.  */
   return TARGET_64BIT ? (HOST_WIDE_INT_1 << 46) : 0;
+}
+
+/* LoongArch only implements preld hint=0 (prefetch for load) and hint=8
+   (prefetch for store), other hint just scale to hint = 0 and hint = 1. */
+
+rtx
+loongarch_prefetch_cookie (rtx write, rtx locality)
+{
+  if (INTVAL (locality) == 1 && INTVAL (write) == 0)
+    return GEN_INT (INTVAL (write) + 2);
+
+  /* store.  */
+  if (INTVAL (write) == 1)
+    return GEN_INT (INTVAL (write) + 7);
+
+  /* load.  */
+  if (INTVAL (write) == 0)
+    return GEN_INT (INTVAL (write));
+
+  gcc_unreachable ();
 }
 
 /* Initialize the GCC target structure.  */

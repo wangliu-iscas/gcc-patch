@@ -3201,6 +3201,29 @@
 ;;  ....................
 ;;
 
+(define_insn "prefetch"
+  [(prefetch (match_operand 0 "address_operand" "p")
+	     (match_operand 1 "const_int_operand" "n")
+	     (match_operand 2 "const_int_operand" "n"))]
+  ""
+{
+  operands[1] = loongarch_prefetch_cookie (operands[1], operands[2]);
+  return "preld\t%1,%a0";
+}
+  [(set_attr "type" "prefetch")])
+
+(define_insn "*prefetch_indexed_<mode>"
+  [(prefetch (plus:P (match_operand 0 "register_operand" "r")
+		     (match_operand 1 "register_operand" "r"))
+	     (match_operand 2 "const_int_operand" "n")
+	     (match_operand 3 "const_int_operand" "n"))]
+  ""
+{
+  operands[2] = loongarch_prefetch_cookie (operands[2], operands[3]);
+  return "preldx\t%2,%1,%0";
+}
+  [(set_attr "type" "prefetchx")])
+
 (define_insn "nop"
   [(const_int 0)]
   ""
