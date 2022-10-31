@@ -1,5 +1,5 @@
 /* { dg-do compile } */
-/* { dg-options "-march=rv32gcv -mabi=ilp32d -O3" } */
+/* { dg-options "-march=rv32gcv -mabi=ilp32 -O3" } */
 /* { dg-final { check-function-bodies "**" "" } } */
 
 #include <riscv_vector.h>

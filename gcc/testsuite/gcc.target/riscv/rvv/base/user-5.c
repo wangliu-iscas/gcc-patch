@@ -1,5 +1,5 @@
 /* { dg-do compile } */
-/* { dg-options "-O3 -march=rv32gc_zve32x -mabi=ilp32d" } */
+/* { dg-options "-O3 -march=rv32gc_zve32x -mabi=ilp32" } */
 
 #include "riscv_vector.h"
 
